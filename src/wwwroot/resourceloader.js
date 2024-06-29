@@ -48,6 +48,17 @@
             document.head.appendChild(link);
         });
     }
+
+    waitForVariable(variableName, interval = 100) {
+        return new Promise((resolve) => {
+            const checkVariable = setInterval(() => {
+                if (typeof window[variableName] !== 'undefined' && window[variableName] !== null) {
+                    clearInterval(checkVariable);
+                    resolve(window[variableName]);
+                }
+            }, interval);
+        });
+    }
 }
 
 window.ResourceLoader = new ResourceLoader();
