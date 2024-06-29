@@ -17,6 +17,7 @@ public class ResourceLoader : IResourceLoader
     {
         _jsRuntime = jsRuntime;
     }
+
     public Task LoadScript(string uri, string integrity, CancellationToken cancellationToken = default)
     {
         return _loadingScripts.GetOrAdd(uri, _ => LoadScriptInternal(uri, integrity, cancellationToken));
