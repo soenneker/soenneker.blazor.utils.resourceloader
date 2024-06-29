@@ -12,7 +12,7 @@ public static class ResourceLoaderRegistrar
     /// <summary>
     /// Adds <see cref="IResourceLoader"/> as a singleton service. <para/>
     /// </summary>
-    public static void AddModuleImportUtil(this IServiceCollection services)
+    public static void AddResourceLoader(this IServiceCollection services)
     {
         services.TryAddSingleton<IResourceLoader, ResourceLoader>();
     }
