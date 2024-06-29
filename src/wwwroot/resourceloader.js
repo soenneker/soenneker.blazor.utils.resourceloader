@@ -22,11 +22,11 @@
             
             script.onload = () => resolve();
             script.onerror = () => reject(new Error(`Failed to load script: ${url}`));
-            document.head.appendChild(script);
+            document.body.appendChild(script);
         });
     }
 
-    loadCss(url, integrity, crossorigin = 'anonymous') {
+    loadStyle(url, integrity, crossorigin = 'anonymous') {
         if (this.loadedCss[url] === true)
             return;
 
