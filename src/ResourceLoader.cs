@@ -3,6 +3,11 @@ using Soenneker.Blazor.Utils.ResourceLoader.Abstract;
 using System.Threading.Tasks;
 using System.Threading;
 using System.Collections.Concurrent;
+using Soenneker.Blazor.Utils.ModuleImport.Abstract;
+using Soenneker.Utils.AsyncSingleton;
+using Soenneker.Extensions.Task;
+using Soenneker.Extensions.ValueTask;
+using Soenneker.Blazor.Utils.JsVariable.Abstract;
 
 namespace Soenneker.Blazor.Utils.ResourceLoader;
 
@@ -10,22 +15,38 @@ namespace Soenneker.Blazor.Utils.ResourceLoader;
 public class ResourceLoader : IResourceLoader
 {
     private readonly IJSRuntime _jsRuntime;
+    private readonly IJsVariableInterop _jsVariableInterop;
     private readonly ConcurrentDictionary<string, Task> _loadingScripts = new();
     private readonly ConcurrentDictionary<string, Task> _loadingStyles = new();
 
-    public ResourceLoader(IJSRuntime jsRuntime)
+    private readonly AsyncSingleton<object> _scriptInitializer;
+
+    public ResourceLoader(IJSRuntime jsRuntime, IModuleImportUtil moduleImportUtil, IJsVariableInterop jsVariableInterop)
     {
         _jsRuntime = jsRuntime;
+        _jsVariableInterop = jsVariableInterop;
+
+        _scriptInitializer = new AsyncSingleton<object>(async objects => {
+
+            var cancellationToken = (CancellationToken)objects[0];
+
+            await moduleImportUtil.Import("Soenneker.Blazor.Utils.ResourceLoader/resourceloader.js", cancellationToken);
+            await moduleImportUtil.WaitUntilLoadedAndAvailable("Soenneker.Blazor.Utils.ResourceLoader/resourceloader.js", "ResourceLoader", 100, cancellationToken);
+
+            return new object();
+        });
     }
 
-    public Task LoadScript(string uri, string integrity, CancellationToken cancellationToken = default)
+    public async ValueTask LoadScript(string uri, string integrity, CancellationToken cancellationToken = default)
     {
-        return _loadingScripts.GetOrAdd(uri, _ => LoadScriptInternal(uri, integrity, cancellationToken));
+        _ = await _scriptInitializer.Get(cancellationToken).NoSync();
+        await _loadingScripts.GetOrAdd(uri, _ => LoadScriptInternal(uri, integrity, cancellationToken)).NoSync();
     }
 
-    public Task LoadStyle(string uri, string integrity, CancellationToken cancellationToken = default)
+    public async ValueTask LoadStyle(string uri, string integrity, CancellationToken cancellationToken = default)
     {
-        return _loadingStyles.GetOrAdd(uri, _ => LoadStyleInternal(uri, integrity, cancellationToken));
+        _ = await _scriptInitializer.Get(cancellationToken).NoSync();
+        await _loadingStyles.GetOrAdd(uri, _ => LoadStyleInternal(uri, integrity, cancellationToken)).NoSync();
     }
 
     private Task LoadScriptInternal(string uri, string integrity, CancellationToken cancellationToken)
@@ -36,5 +57,10 @@ public class ResourceLoader : IResourceLoader
     private Task LoadStyleInternal(string uri, string integrity, CancellationToken cancellationToken)
     {
         return _jsRuntime.InvokeVoidAsync("ResourceLoader.loadStyle", cancellationToken, uri, integrity).AsTask();
+    }
+
+    public ValueTask WaitForVariable(string variableName, int delay = 100, CancellationToken cancellationToken = default)
+    {
+        return _jsVariableInterop.WaitForVariable(variableName, delay, cancellationToken);
     }
 }

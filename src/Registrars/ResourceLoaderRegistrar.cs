@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Soenneker.Blazor.Utils.ModuleImport.Registrars;
 using Soenneker.Blazor.Utils.ResourceLoader.Abstract;
 
 namespace Soenneker.Blazor.Utils.ResourceLoader.Registrars;
@@ -14,6 +15,7 @@ public static class ResourceLoaderRegistrar
     /// </summary>
     public static void AddResourceLoader(this IServiceCollection services)
     {
+        services.AddModuleImportUtil();
         services.TryAddSingleton<IResourceLoader, ResourceLoader>();
     }
 }
