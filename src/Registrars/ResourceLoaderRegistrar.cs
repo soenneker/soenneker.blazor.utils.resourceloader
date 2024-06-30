@@ -6,7 +6,7 @@ using Soenneker.Blazor.Utils.ResourceLoader.Abstract;
 namespace Soenneker.Blazor.Utils.ResourceLoader.Registrars;
 
 /// <summary>
-/// A Blazor JavaScript module for dynamically loading scripts and styles
+/// A Blazor JavaScript interop for dynamically loading scripts, styles, and modules
 /// </summary>
 public static class ResourceLoaderRegistrar
 {

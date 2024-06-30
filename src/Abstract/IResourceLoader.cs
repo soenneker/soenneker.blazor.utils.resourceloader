@@ -5,8 +5,8 @@ using Microsoft.JSInterop;
 namespace Soenneker.Blazor.Utils.ResourceLoader.Abstract;
 
 /// <summary>
-/// Defines methods for loading external resources such as scripts and styles. 
-/// Ensures that each resource is only loaded once, even with multiple concurrent calls.
+/// A Blazor JavaScript interop for dynamically loading scripts, styles, and modules
+/// Ensures that each resource is only loaded once (through this interop), even with multiple concurrent calls.
 /// </summary>
 public interface IResourceLoader
 {
