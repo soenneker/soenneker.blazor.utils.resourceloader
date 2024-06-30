@@ -29,7 +29,6 @@ public class ResourceLoader : IResourceLoader
         {
             var cancellationToken = (CancellationToken) objects[0];
 
-            await _moduleImportUtil.Import("Soenneker.Blazor.Utils.ResourceLoader/resourceloader.js", cancellationToken);
             await _moduleImportUtil.ImportAndWaitUntilAvailable("Soenneker.Blazor.Utils.ResourceLoader/resourceloader.js", "ResourceLoader", 100, cancellationToken);
 
             return new object();
@@ -92,5 +91,15 @@ public class ResourceLoader : IResourceLoader
     public ValueTask WaitForVariable(string variableName, int delay = 100, CancellationToken cancellationToken = default)
     {
         return _jsVariableInterop.WaitForVariable(variableName, delay, cancellationToken);
+    }
+
+    public ValueTask DisposeModule(string name, CancellationToken cancellationToken = default)
+    {
+        return _moduleImportUtil.DisposeModule(name, cancellationToken);
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        return _moduleImportUtil.DisposeModule("Soenneker.Blazor.Utils.ResourceLoader/resourceloader.js");
     }
 }

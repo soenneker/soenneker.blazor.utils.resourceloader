@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using System.Threading;
 using Microsoft.JSInterop;
 
@@ -8,7 +9,7 @@ namespace Soenneker.Blazor.Utils.ResourceLoader.Abstract;
 /// A Blazor JavaScript interop for dynamically loading scripts, styles, and modules
 /// Ensures that each resource is only loaded once (through this interop), even with multiple concurrent calls.
 /// </summary>
-public interface IResourceLoader
+public interface IResourceLoader : IAsyncDisposable
 {
     /// <summary>
     /// Loads a script from the specified URI if it hasn't already been loaded (through the ResourceLoader)
@@ -73,4 +74,6 @@ public interface IResourceLoader
     /// <returns>A <see cref="ValueTask"/> that represents the asynchronous operation.</returns>
     /// <remarks>This method ensures the necessary JavaScript is injected and repeatedly checks for the variable's availability until it becomes available or the operation is canceled.</remarks>
     ValueTask WaitForVariable(string variableName, int delay = 100, CancellationToken cancellationToken = default);
+
+    public ValueTask DisposeModule(string name, CancellationToken cancellationToken = default);
 }
