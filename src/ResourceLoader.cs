@@ -25,31 +25,27 @@ public class ResourceLoader : IResourceLoader
         _moduleImportUtil = moduleImportUtil;
         _jsVariableInterop = jsVariableInterop;
 
-        _initializer = new AsyncSingleton<object>(async objects =>
+        _initializer = new AsyncSingleton<object>(async (token, _) =>
         {
-            var cancellationToken = (CancellationToken) objects[0];
-
-            await _moduleImportUtil.ImportAndWaitUntilAvailable("Soenneker.Blazor.Utils.ResourceLoader/resourceloader.js", "ResourceLoader", 100, cancellationToken);
+            await _moduleImportUtil.ImportAndWaitUntilAvailable("Soenneker.Blazor.Utils.ResourceLoader/resourceloader.js", "ResourceLoader", 100, token);
 
             return new object();
         });
 
-        _scripts = new SingletonDictionary<object>(async (uri, objects) =>
+        _scripts = new SingletonDictionary<object>(async (uri, token, objects) =>
         {
             var integrity = (string?) objects[0];
-            var cancellationToken = (CancellationToken) objects[1];
 
-            await jsRuntime.InvokeVoidAsync("ResourceLoader.loadScript", cancellationToken, uri, integrity);
+            await jsRuntime.InvokeVoidAsync("ResourceLoader.loadScript", token, uri, integrity);
 
             return new object();
         });
 
-        _styles = new SingletonDictionary<object>(async (uri, objects) =>
+        _styles = new SingletonDictionary<object>(async (uri, token, objects) =>
         {
             var integrity = (string?) objects[0];
-            var cancellationToken = (CancellationToken) objects[1];
 
-            await jsRuntime.InvokeVoidAsync("ResourceLoader.loadStyle", cancellationToken, uri, integrity);
+            await jsRuntime.InvokeVoidAsync("ResourceLoader.loadStyle", token, uri, integrity);
 
             return new object();
         });
@@ -58,7 +54,7 @@ public class ResourceLoader : IResourceLoader
     public async ValueTask LoadScript(string uri, string? integrity = null, CancellationToken cancellationToken = default)
     {
         _ = await _initializer.Get(cancellationToken).NoSync();
-        _ = await _scripts.Get(uri, integrity!, cancellationToken).NoSync();
+        _ = await _scripts.Get(uri, cancellationToken, integrity!).NoSync();
     }
 
     public async ValueTask LoadScriptAndWaitForVariable(string uri, string variableName, string? integrity = null, CancellationToken cancellationToken = default)
@@ -70,7 +66,7 @@ public class ResourceLoader : IResourceLoader
     public async ValueTask LoadStyle(string uri, string? integrity, CancellationToken cancellationToken = default)
     {
         _ = await _initializer.Get(cancellationToken).NoSync();
-        _ = await _styles.Get(uri, integrity!, cancellationToken).NoSync();
+        _ = await _styles.Get(uri, cancellationToken, integrity!).NoSync();
     }
 
     public ValueTask<IJSObjectReference> ImportModule(string name, CancellationToken cancellationToken = default)
