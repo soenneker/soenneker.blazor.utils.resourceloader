@@ -16,9 +16,13 @@ public interface IResourceLoader : IAsyncDisposable
     /// </summary>
     /// <param name="uri">The URI of the script to load.</param>
     /// <param name="integrity">The integrity hash of the script for Subresource Integrity (SRI) validation.</param>
+    /// <param name="defer"></param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <param name="crossOrigin"></param>
+    /// <param name="loadInHead"></param>
+    /// <param name="async"></param>
     /// <returns>A task that represents the asynchronous operation. The task will complete when the script is loaded or if it has already been loaded.</returns>
-    ValueTask LoadScript(string uri, string? integrity = null, CancellationToken cancellationToken = default);
+    ValueTask LoadScript(string uri, string? integrity = null, string? crossOrigin = "anonymous", bool loadInHead = false, bool async = false, bool defer = false, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Loads a script from the specified URI and waits until the specified JavaScript variable is available.
@@ -26,9 +30,14 @@ public interface IResourceLoader : IAsyncDisposable
     /// <param name="uri">The URI of the script to load.</param>
     /// <param name="variableName">The name of the JavaScript variable to wait for.</param>
     /// <param name="integrity">The integrity hash of the script for Subresource Integrity (SRI) validation. This parameter is optional.</param>
+    /// <param name="defer"></param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <param name="crossOrigin"></param>
+    /// <param name="loadInHead"></param>
+    /// <param name="async"></param>
     /// <returns>A task that represents the asynchronous operation. The task completes when the script is loaded and the variable is available or the operation is cancelled.</returns>
-    ValueTask LoadScriptAndWaitForVariable(string uri, string variableName, string? integrity = null, CancellationToken cancellationToken = default);
+    ValueTask LoadScriptAndWaitForVariable(string uri, string variableName, string? integrity = null, string? crossOrigin = "anonymous", bool loadInHead = false, bool async = false,
+        bool defer = false, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Imports a JavaScript module by its name.
@@ -61,9 +70,12 @@ public interface IResourceLoader : IAsyncDisposable
     /// </summary>
     /// <param name="uri">The URI of the style to load.</param>
     /// <param name="integrity">The integrity hash of the style for Subresource Integrity (SRI) validation.</param>
+    /// <param name="type"></param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <param name="crossOrigin"></param>
+    /// <param name="media"></param>
     /// <returns>A task that represents the asynchronous operation. The task will complete when the style is loaded or if it has already been loaded.</returns>
-    ValueTask LoadStyle(string uri, string? integrity = null, CancellationToken cancellationToken = default);
+    ValueTask LoadStyle(string uri, string? integrity = null, string? crossOrigin = "anonymous", string? media = "all", string? type = "text/css", CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Asynchronously waits until a specified JavaScript variable is available in the global scope.

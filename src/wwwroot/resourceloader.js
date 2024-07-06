@@ -4,7 +4,7 @@
         this.loadedCss = {};
     }
 
-    loadScript(url, integrity, crossorigin = 'anonymous') {
+    loadScript(url, integrity, crossorigin, loadInHead, async, defer) {
         if (this.loadedScripts[url] === true)
             return;
 
@@ -19,14 +19,24 @@
 
             if (integrity)
                 script.integrity = integrity;
-            
+
+            if (async)
+                script.async = true;
+
+            if (defer)
+                script.defer = true;
+
             script.onload = () => resolve();
             script.onerror = () => reject(new Error(`Failed to load script: ${url}`));
-            document.body.appendChild(script);
+
+            if (loadInHead)
+                document.head.appendChild(script);
+            else
+                document.body.appendChild(script);
         });
     }
 
-    loadStyle(url, integrity, crossorigin = 'anonymous') {
+    loadStyle(url, integrity, crossorigin, media, type) {
         if (this.loadedCss[url] === true)
             return;
 
@@ -42,7 +52,10 @@
 
             if (integrity)
                 link.integrity = integrity;
-            
+
+            link.media = media;
+            link.type = type;
+
             link.onload = () => resolve();
             link.onerror = () => reject(new Error(`Failed to load stylesheet: ${url}`));
             document.head.appendChild(link);
