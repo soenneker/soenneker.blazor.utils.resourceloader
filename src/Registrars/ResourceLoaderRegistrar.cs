@@ -11,11 +11,11 @@ namespace Soenneker.Blazor.Utils.ResourceLoader.Registrars;
 public static class ResourceLoaderRegistrar
 {
     /// <summary>
-    /// Adds <see cref="IResourceLoader"/> as a singleton service. <para/>
+    /// Adds <see cref="IResourceLoader"/> as a scoped service. <para/>
     /// </summary>
     public static void AddResourceLoader(this IServiceCollection services)
     {
         services.AddModuleImportUtil();
-        services.TryAddSingleton<IResourceLoader, ResourceLoader>();
+        services.TryAddScoped<IResourceLoader, ResourceLoader>();
     }
 }
