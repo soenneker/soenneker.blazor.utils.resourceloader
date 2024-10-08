@@ -28,7 +28,7 @@ public class ResourceLoader : IResourceLoader
 
         _initializer = new AsyncSingleton(async (token, _) =>
         {
-            await _moduleImportUtil.ImportAndWaitUntilAvailable("Soenneker.Blazor.Utils.ResourceLoader/resourceloader.js", "ResourceLoader", 100, token);
+            await _moduleImportUtil.ImportAndWaitUntilAvailable("Soenneker.Blazor.Utils.ResourceLoader/resourceloader.js", "ResourceLoader", 100, token).NoSync();
 
             return new object();
         });
@@ -41,7 +41,7 @@ public class ResourceLoader : IResourceLoader
             var async = (bool)objects[3];
             var defer = (bool)objects[4];
 
-            await jsRuntime.InvokeVoidAsync("ResourceLoader.loadScript", token, uri, integrity, crossOrigin, loadInHead, async, defer);
+            await jsRuntime.InvokeVoidAsync("ResourceLoader.loadScript", token, uri, integrity, crossOrigin, loadInHead, async, defer).NoSync();
 
             return new object();
         });
@@ -53,7 +53,7 @@ public class ResourceLoader : IResourceLoader
             var media = (string?) objects[2];
             var type = (string?) objects[3];
 
-            await jsRuntime.InvokeVoidAsync("ResourceLoader.loadStyle", token, uri, integrity, crossOrigin, media, type);
+            await jsRuntime.InvokeVoidAsync("ResourceLoader.loadStyle", token, uri, integrity, crossOrigin, media, type).NoSync();
 
             return new object();
         });
