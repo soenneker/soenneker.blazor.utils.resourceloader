@@ -7,6 +7,7 @@ using Soenneker.Utils.AsyncSingleton;
 using Soenneker.Extensions.ValueTask;
 using Soenneker.Blazor.Utils.JsVariable.Abstract;
 using Soenneker.Utils.SingletonDictionary;
+using System;
 
 namespace Soenneker.Blazor.Utils.ResourceLoader;
 
@@ -18,14 +19,14 @@ public class ResourceLoader : IResourceLoader
     private readonly SingletonDictionary<object> _scripts;
     private readonly SingletonDictionary<object> _styles;
 
-    private readonly AsyncSingleton<object> _initializer;
+    private readonly AsyncSingleton _initializer;
 
     public ResourceLoader(IJSRuntime jsRuntime, IModuleImportUtil moduleImportUtil, IJsVariableInterop jsVariableInterop)
     {
         _moduleImportUtil = moduleImportUtil;
         _jsVariableInterop = jsVariableInterop;
 
-        _initializer = new AsyncSingleton<object>(async (token, _) =>
+        _initializer = new AsyncSingleton(async (token, _) =>
         {
             await _moduleImportUtil.ImportAndWaitUntilAvailable("Soenneker.Blazor.Utils.ResourceLoader/resourceloader.js", "ResourceLoader", 100, token);
 
@@ -61,7 +62,7 @@ public class ResourceLoader : IResourceLoader
     public async ValueTask LoadScript(string uri, string? integrity = null, string? crossOrigin = "anonymous", bool loadInHead = false, bool async = false, bool defer = false,
         CancellationToken cancellationToken = default)
     {
-        _ = await _initializer.Get(cancellationToken).NoSync();
+        await _initializer.Init(cancellationToken).NoSync();
         _ = await _scripts.Get(uri, cancellationToken, integrity!, crossOrigin!, loadInHead, async, defer).NoSync();
     }
 
@@ -74,7 +75,7 @@ public class ResourceLoader : IResourceLoader
 
     public async ValueTask LoadStyle(string uri, string? integrity, string? crossOrigin = "anonymous", string? media = "all", string? type = "text/css", CancellationToken cancellationToken = default)
     {
-        _ = await _initializer.Get(cancellationToken).NoSync();
+        await _initializer.Init(cancellationToken).NoSync();
         _ = await _styles.Get(uri, cancellationToken, integrity!, crossOrigin!, media!, type!).NoSync();
     }
 
@@ -105,6 +106,8 @@ public class ResourceLoader : IResourceLoader
 
     public ValueTask DisposeAsync()
     {
+        GC.SuppressFinalize(this);
+
         return _moduleImportUtil.DisposeModule("Soenneker.Blazor.Utils.ResourceLoader/resourceloader.js");
     }
 }
