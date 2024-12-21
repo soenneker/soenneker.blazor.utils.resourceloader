@@ -13,9 +13,11 @@ public static class ResourceLoaderRegistrar
     /// <summary>
     /// Adds <see cref="IResourceLoader"/> as a scoped service. <para/>
     /// </summary>
-    public static void AddResourceLoaderAsScoped(this IServiceCollection services)
+    public static IServiceCollection AddResourceLoaderAsScoped(this IServiceCollection services)
     {
-        services.AddModuleImportUtil();
+        services.AddModuleImportUtilAsScoped();
         services.TryAddScoped<IResourceLoader, ResourceLoader>();
+
+        return services;
     }
 }
