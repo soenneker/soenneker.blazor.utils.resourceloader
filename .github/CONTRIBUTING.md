@@ -1,4 +1,4 @@
-# Contributing to Soenneker.Blazor.Utils.ResourceLoader
+﻿# Contributing to Soenneker.Blazor.Utils.ResourceLoader
 
 We're excited that you're interested in contributing!
 
