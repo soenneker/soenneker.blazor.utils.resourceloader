@@ -12,7 +12,7 @@ using System;
 namespace Soenneker.Blazor.Utils.ResourceLoader;
 
 ///<inheritdoc cref="IResourceLoader"/>
-public class ResourceLoader : IResourceLoader
+public sealed class ResourceLoader : IResourceLoader
 {
     private readonly IModuleImportUtil _moduleImportUtil;
     private readonly IJsVariableInterop _jsVariableInterop;
@@ -106,8 +106,6 @@ public class ResourceLoader : IResourceLoader
 
     public ValueTask DisposeAsync()
     {
-        GC.SuppressFinalize(this);
-
         return _moduleImportUtil.DisposeModule("Soenneker.Blazor.Utils.ResourceLoader/resourceloader.js");
     }
 }
