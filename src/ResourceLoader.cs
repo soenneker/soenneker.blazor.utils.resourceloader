@@ -1,4 +1,4 @@
-﻿using Microsoft.JSInterop;
+using Microsoft.JSInterop;
 using Soenneker.Blazor.Utils.ResourceLoader.Abstract;
 using System.Threading.Tasks;
 using System.Threading;
@@ -31,7 +31,7 @@ public sealed class ResourceLoader : IResourceLoader
 
         _initializer = new AsyncSingleton(async (token, _) =>
         {
-            await _moduleImportUtil.ImportAndWaitUntilAvailable(_modulePath, _moduleName, 100, token).NoSync();
+            await _moduleImportUtil.ImportAndWaitUntilAvailable(_modulePath, _moduleName, 100, token);
 
             return new object();
         });
@@ -44,7 +44,7 @@ public sealed class ResourceLoader : IResourceLoader
             var async = (bool)objects[3];
             var defer = (bool)objects[4];
 
-            await jsRuntime.InvokeVoidAsync($"{_moduleName}.loadScript", token, uri, integrity, crossOrigin, loadInHead, async, defer).NoSync();
+            await jsRuntime.InvokeVoidAsync($"{_moduleName}.loadScript", token, uri, integrity, crossOrigin, loadInHead, async, defer);
 
             return new object();
         });
@@ -56,7 +56,7 @@ public sealed class ResourceLoader : IResourceLoader
             var media = (string?) objects[2];
             var type = (string?) objects[3];
 
-            await jsRuntime.InvokeVoidAsync($"{_moduleName}.loadStyle", token, uri, integrity, crossOrigin, media, type).NoSync();
+            await jsRuntime.InvokeVoidAsync($"{_moduleName}.loadStyle", token, uri, integrity, crossOrigin, media, type);
 
             return new object();
         });
@@ -65,21 +65,21 @@ public sealed class ResourceLoader : IResourceLoader
     public async ValueTask LoadScript(string uri, string? integrity = null, string? crossOrigin = "anonymous", bool loadInHead = false, bool async = false, bool defer = false,
         CancellationToken cancellationToken = default)
     {
-        await _initializer.Init(cancellationToken).NoSync();
-        _ = await _scripts.Get(uri, cancellationToken, integrity!, crossOrigin!, loadInHead, async, defer).NoSync();
+        await _initializer.Init(cancellationToken);
+        _ = await _scripts.Get(uri, cancellationToken, integrity!, crossOrigin!, loadInHead, async, defer);
     }
 
     public async ValueTask LoadScriptAndWaitForVariable(string uri, string variableName, string? integrity = null, string? crossOrigin = "anonymous", bool loadInHead = false, bool async = false,
         bool defer = false, CancellationToken cancellationToken = default)
     {
-        await LoadScript(uri, integrity, crossOrigin, loadInHead, async, defer, cancellationToken).NoSync();
-        await WaitForVariable(variableName, cancellationToken: cancellationToken).NoSync();
+        await LoadScript(uri, integrity, crossOrigin, loadInHead, async, defer, cancellationToken);
+        await WaitForVariable(variableName, cancellationToken: cancellationToken);
     }
 
     public async ValueTask LoadStyle(string uri, string? integrity, string? crossOrigin = "anonymous", string? media = "all", string? type = "text/css", CancellationToken cancellationToken = default)
     {
-        await _initializer.Init(cancellationToken).NoSync();
-        _ = await _styles.Get(uri, cancellationToken, integrity!, crossOrigin!, media!, type!).NoSync();
+        await _initializer.Init(cancellationToken);
+        _ = await _styles.Get(uri, cancellationToken, integrity!, crossOrigin!, media!, type!);
     }
 
     public ValueTask<IJSObjectReference> ImportModule(string name, CancellationToken cancellationToken = default)
@@ -109,11 +109,11 @@ public sealed class ResourceLoader : IResourceLoader
 
     public async ValueTask DisposeAsync()
     {
-        await _moduleImportUtil.DisposeModule(_modulePath).NoSync();
+        await _moduleImportUtil.DisposeModule(_modulePath);
 
-        await _scripts.DisposeAsync().NoSync();
-        await _styles.DisposeAsync().NoSync();
+        await _scripts.DisposeAsync();
+        await _styles.DisposeAsync();
 
-        await _initializer.DisposeAsync().NoSync();
+        await _initializer.DisposeAsync();
     }
 }
