@@ -3,9 +3,8 @@ using Soenneker.Blazor.Utils.ResourceLoader.Abstract;
 using System.Threading.Tasks;
 using System.Threading;
 using Soenneker.Blazor.Utils.ModuleImport.Abstract;
-using Soenneker.Utils.AsyncSingleton;
-using Soenneker.Extensions.ValueTask;
 using Soenneker.Blazor.Utils.JsVariable.Abstract;
+using Soenneker.Utils.AsyncInitializers;
 using Soenneker.Utils.SingletonDictionary;
 
 namespace Soenneker.Blazor.Utils.ResourceLoader;
@@ -19,7 +18,7 @@ public sealed class ResourceLoader : IResourceLoader
     private readonly SingletonDictionary<object> _scripts;
     private readonly SingletonDictionary<object> _styles;
 
-    private readonly AsyncSingleton _initializer;
+    private readonly AsyncInitializer _initializer;
 
     private const string _modulePath = "Soenneker.Blazor.Utils.ResourceLoader/js/resourceloader.js";
     private const string _moduleName = "ResourceLoader";
@@ -29,11 +28,9 @@ public sealed class ResourceLoader : IResourceLoader
         _moduleImportUtil = moduleImportUtil;
         _jsVariableInterop = jsVariableInterop;
 
-        _initializer = new AsyncSingleton(async (token, _) =>
+        _initializer = new AsyncInitializer(async token =>
         {
             await _moduleImportUtil.ImportAndWaitUntilAvailable(_modulePath, _moduleName, 100, token);
-
-            return new object();
         });
 
         _scripts = new SingletonDictionary<object>(async (uri, token, objects) =>
