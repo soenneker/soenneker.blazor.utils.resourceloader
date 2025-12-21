@@ -2,9 +2,9 @@ using Microsoft.JSInterop;
 using Soenneker.Blazor.Utils.ResourceLoader.Abstract;
 using System.Threading.Tasks;
 using System.Threading;
+using Soenneker.Asyncs.Initializers;
 using Soenneker.Blazor.Utils.ModuleImport.Abstract;
 using Soenneker.Blazor.Utils.JsVariable.Abstract;
-using Soenneker.Utils.AsyncInitializers;
 using Soenneker.Utils.SingletonDictionary;
 
 namespace Soenneker.Blazor.Utils.ResourceLoader;
