@@ -15,13 +15,16 @@ public sealed class ResourceLoader : IResourceLoader
     private readonly IModuleImportUtil _moduleImportUtil;
     private readonly IJsVariableInterop _jsVariableInterop;
 
-    private readonly SingletonDictionary<object> _scripts;
-    private readonly SingletonDictionary<object> _styles;
+    private readonly SingletonDictionary<object, ScriptLoadArgs> _scripts;
+    private readonly SingletonDictionary<object, StyleLoadArgs> _styles;
 
     private readonly AsyncInitializer _initializer;
 
     private const string _modulePath = "Soenneker.Blazor.Utils.ResourceLoader/js/resourceloader.js";
     private const string _moduleName = "ResourceLoader";
+
+    private readonly record struct ScriptLoadArgs(string? Integrity, string? CrossOrigin, bool LoadInHead, bool Async, bool Defer);
+    private readonly record struct StyleLoadArgs(string? Integrity, string? CrossOrigin, string? Media, string? Type);
 
     public ResourceLoader(IJSRuntime jsRuntime, IModuleImportUtil moduleImportUtil, IJsVariableInterop jsVariableInterop)
     {
@@ -33,51 +36,49 @@ public sealed class ResourceLoader : IResourceLoader
             await _moduleImportUtil.ImportAndWaitUntilAvailable(_modulePath, _moduleName, 100, token);
         });
 
-        _scripts = new SingletonDictionary<object>(async (uri, token, objects) =>
+        _scripts = new SingletonDictionary<object, ScriptLoadArgs>(async (uri, token, args) =>
         {
-            var integrity = (string?)objects[0];
-            var crossOrigin = (string?)objects[1];
-            var loadInHead = (bool)objects[2];
-            var async = (bool)objects[3];
-            var defer = (bool)objects[4];
-
-            await jsRuntime.InvokeVoidAsync($"{_moduleName}.loadScript", token, uri, integrity, crossOrigin, loadInHead, async, defer);
+            await jsRuntime.InvokeVoidAsync($"{_moduleName}.loadScript", token, uri, args.Integrity, args.CrossOrigin, args.LoadInHead, args.Async, args.Defer);
 
             return new object();
         });
 
-        _styles = new SingletonDictionary<object>(async (uri, token, objects) =>
+        _styles = new SingletonDictionary<object, StyleLoadArgs>(async (uri, token, args) =>
         {
-            var integrity = (string?) objects[0];
-            var crossOrigin = (string?)objects[1];
-            var media = (string?) objects[2];
-            var type = (string?) objects[3];
-
-            await jsRuntime.InvokeVoidAsync($"{_moduleName}.loadStyle", token, uri, integrity, crossOrigin, media, type);
+            await jsRuntime.InvokeVoidAsync($"{_moduleName}.loadStyle", token, uri, args.Integrity, args.CrossOrigin, args.Media, args.Type);
 
             return new object();
         });
     }
 
-    public async ValueTask LoadScript(string uri, string? integrity = null, string? crossOrigin = "anonymous", bool loadInHead = false, bool async = false, bool defer = false,
-        CancellationToken cancellationToken = default)
+    public async ValueTask LoadScript(string uri, string? integrity = null, string? crossOrigin = "anonymous", bool loadInHead = false, bool async = false,
+        bool defer = false, CancellationToken cancellationToken = default)
     {
         await _initializer.Init(cancellationToken);
-        _ = await _scripts.Get(uri, cancellationToken, integrity!, crossOrigin!, loadInHead, async, defer);
+
+        var args = new ScriptLoadArgs(Integrity: integrity, CrossOrigin: crossOrigin, LoadInHead: loadInHead, Async: async, Defer: defer);
+
+        _ = await _scripts.Get(uri, args, cancellationToken);
     }
 
-    public async ValueTask LoadScriptAndWaitForVariable(string uri, string variableName, string? integrity = null, string? crossOrigin = "anonymous", bool loadInHead = false, bool async = false,
-        bool defer = false, CancellationToken cancellationToken = default)
+
+    public async ValueTask LoadScriptAndWaitForVariable(string uri, string variableName, string? integrity = null, string? crossOrigin = "anonymous",
+        bool loadInHead = false, bool async = false, bool defer = false, CancellationToken cancellationToken = default)
     {
         await LoadScript(uri, integrity, crossOrigin, loadInHead, async, defer, cancellationToken);
         await WaitForVariable(variableName, cancellationToken: cancellationToken);
     }
 
-    public async ValueTask LoadStyle(string uri, string? integrity, string? crossOrigin = "anonymous", string? media = "all", string? type = "text/css", CancellationToken cancellationToken = default)
+    public async ValueTask LoadStyle(string uri, string? integrity, string? crossOrigin = "anonymous", string? media = "all", string? type = "text/css",
+        CancellationToken cancellationToken = default)
     {
         await _initializer.Init(cancellationToken);
-        _ = await _styles.Get(uri, cancellationToken, integrity!, crossOrigin!, media!, type!);
+
+        var args = new StyleLoadArgs(Integrity: integrity, CrossOrigin: crossOrigin, Media: media, Type: type);
+
+        _ = await _styles.Get(uri, args, cancellationToken);
     }
+
 
     public ValueTask<IJSObjectReference> ImportModule(string name, CancellationToken cancellationToken = default)
     {
