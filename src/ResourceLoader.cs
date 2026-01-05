@@ -14,6 +14,7 @@ public sealed class ResourceLoader : IResourceLoader
 {
     private readonly IModuleImportUtil _moduleImportUtil;
     private readonly IJsVariableInterop _jsVariableInterop;
+    private readonly IJSRuntime _jsRuntime;
 
     private readonly SingletonDictionary<object, ScriptLoadArgs> _scripts;
     private readonly SingletonDictionary<object, StyleLoadArgs> _styles;
@@ -30,25 +31,31 @@ public sealed class ResourceLoader : IResourceLoader
     {
         _moduleImportUtil = moduleImportUtil;
         _jsVariableInterop = jsVariableInterop;
+        _jsRuntime = jsRuntime;
 
-        _initializer = new AsyncInitializer(async token =>
-        {
-            await _moduleImportUtil.ImportAndWaitUntilAvailable(_modulePath, _moduleName, 100, token);
-        });
+        _initializer = new AsyncInitializer(Initialize);
 
-        _scripts = new SingletonDictionary<object, ScriptLoadArgs>(async (uri, token, args) =>
-        {
-            await jsRuntime.InvokeVoidAsync($"{_moduleName}.loadScript", token, uri, args.Integrity, args.CrossOrigin, args.LoadInHead, args.Async, args.Defer);
+        _scripts = new SingletonDictionary<object, ScriptLoadArgs>(LoadScript);
+        _styles = new SingletonDictionary<object, StyleLoadArgs>(LoadStyle);
+    }
 
-            return new object();
-        });
+    private async ValueTask Initialize(CancellationToken token)
+    {
+        await _moduleImportUtil.ImportAndWaitUntilAvailable(_modulePath, _moduleName, 100, token);
+    }
 
-        _styles = new SingletonDictionary<object, StyleLoadArgs>(async (uri, token, args) =>
-        {
-            await jsRuntime.InvokeVoidAsync($"{_moduleName}.loadStyle", token, uri, args.Integrity, args.CrossOrigin, args.Media, args.Type);
+    private async ValueTask<object> LoadScript(string uri, CancellationToken token, ScriptLoadArgs args)
+    {
+        await _jsRuntime.InvokeVoidAsync($"{_moduleName}.loadScript", token, uri, args.Integrity, args.CrossOrigin, args.LoadInHead, args.Async, args.Defer);
 
-            return new object();
-        });
+        return new object();
+    }
+
+    private async ValueTask<object> LoadStyle(string uri, CancellationToken token, StyleLoadArgs args)
+    {
+        await _jsRuntime.InvokeVoidAsync($"{_moduleName}.loadStyle", token, uri, args.Integrity, args.CrossOrigin, args.Media, args.Type);
+
+        return new object();
     }
 
     public async ValueTask LoadScript(string uri, string? integrity = null, string? crossOrigin = "anonymous", bool loadInHead = false, bool async = false,
