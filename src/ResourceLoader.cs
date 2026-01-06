@@ -39,9 +39,9 @@ public sealed class ResourceLoader : IResourceLoader
         _styles = new SingletonDictionary<object, StyleLoadArgs>(LoadStyle);
     }
 
-    private async ValueTask Initialize(CancellationToken token)
+    private ValueTask Initialize(CancellationToken token)
     {
-        await _moduleImportUtil.ImportAndWaitUntilAvailable(_modulePath, _moduleName, 100, token);
+        return _moduleImportUtil.ImportAndWaitUntilAvailable(_modulePath, _moduleName, 100, token);
     }
 
     private async ValueTask<object> LoadScript(string uri, CancellationToken token, ScriptLoadArgs args)
