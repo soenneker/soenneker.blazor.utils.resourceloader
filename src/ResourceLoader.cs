@@ -46,14 +46,14 @@ public sealed class ResourceLoader : IResourceLoader
 
     private async ValueTask<object> LoadScript(string uri, CancellationToken token, ScriptLoadArgs args)
     {
-        await _jsRuntime.InvokeVoidAsync($"{_moduleName}.loadScript", token, uri, args.Integrity, args.CrossOrigin, args.LoadInHead, args.Async, args.Defer);
+        await _jsRuntime.InvokeVoidAsync("ResourceLoaderInterop.loadScript", token, uri, args.Integrity, args.CrossOrigin, args.LoadInHead, args.Async, args.Defer);
 
         return new object();
     }
 
     private async ValueTask<object> LoadStyle(string uri, CancellationToken token, StyleLoadArgs args)
     {
-        await _jsRuntime.InvokeVoidAsync($"{_moduleName}.loadStyle", token, uri, args.Integrity, args.CrossOrigin, args.Media, args.Type);
+        await _jsRuntime.InvokeVoidAsync("ResourceLoaderInterop.loadStyle", token, uri, args.Integrity, args.CrossOrigin, args.Media, args.Type);
 
         return new object();
     }
