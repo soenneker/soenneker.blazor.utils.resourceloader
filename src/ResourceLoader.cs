@@ -5,7 +5,7 @@ using System.Threading;
 using Soenneker.Asyncs.Initializers;
 using Soenneker.Blazor.Utils.ModuleImport.Abstract;
 using Soenneker.Blazor.Utils.JsVariable.Abstract;
-using Soenneker.Utils.SingletonDictionary;
+using Soenneker.Dictionaries.Singletons;
 
 namespace Soenneker.Blazor.Utils.ResourceLoader;
 
@@ -44,14 +44,14 @@ public sealed class ResourceLoader : IResourceLoader
         return _moduleImportUtil.ImportAndWaitUntilAvailable(_modulePath, _moduleName, 100, token);
     }
 
-    private async ValueTask<object> LoadScript(string uri, CancellationToken token, ScriptLoadArgs args)
+    private async ValueTask<object> LoadScript(string uri, ScriptLoadArgs args, CancellationToken token)
     {
         await _jsRuntime.InvokeVoidAsync("ResourceLoaderInterop.loadScript", token, uri, args.Integrity, args.CrossOrigin, args.LoadInHead, args.Async, args.Defer);
 
         return new object();
     }
 
-    private async ValueTask<object> LoadStyle(string uri, CancellationToken token, StyleLoadArgs args)
+    private async ValueTask<object> LoadStyle(string uri, StyleLoadArgs args, CancellationToken token)
     {
         await _jsRuntime.InvokeVoidAsync("ResourceLoaderInterop.loadStyle", token, uri, args.Integrity, args.CrossOrigin, args.Media, args.Type);
 
