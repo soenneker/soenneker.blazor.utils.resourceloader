@@ -106,44 +106,44 @@ public sealed class ResourceLoader : IResourceLoader
     }
 
 
-    public ValueTask<IJSObjectReference> ImportModule(string name, CancellationToken cancellationToken = default)
+    public async ValueTask<IJSObjectReference> ImportModule(string name, CancellationToken cancellationToken = default)
     {
         var linked = _cancellationScope.CancellationToken.Link(cancellationToken, out var source);
 
         using (source)
-            return _moduleImportUtil.Import(name, linked);
+            return await _moduleImportUtil.Import(name, linked);
     }
 
-    public ValueTask ImportModuleAndWait(string name, CancellationToken cancellationToken = default)
+    public async ValueTask ImportModuleAndWait(string name, CancellationToken cancellationToken = default)
     {
         var linked = _cancellationScope.CancellationToken.Link(cancellationToken, out var source);
 
         using (source)
-            return _moduleImportUtil.ImportAndWait(name, linked);
+            await _moduleImportUtil.ImportAndWait(name, linked);
     }
 
-    public ValueTask ImportModuleAndWaitUntilAvailable(string name, string variableName, int delay = 100, CancellationToken cancellationToken = default)
+    public async ValueTask ImportModuleAndWaitUntilAvailable(string name, string variableName, int delay = 100, CancellationToken cancellationToken = default)
     {
         var linked = _cancellationScope.CancellationToken.Link(cancellationToken, out var source);
 
         using (source)
-            return _moduleImportUtil.ImportAndWaitUntilAvailable(name, variableName, delay, linked);
+            await _moduleImportUtil.ImportAndWaitUntilAvailable(name, variableName, delay, linked);
     }
 
-    public ValueTask WaitForVariable(string variableName, int delay = 100, CancellationToken cancellationToken = default)
+    public async ValueTask WaitForVariable(string variableName, int delay = 100, CancellationToken cancellationToken = default)
     {
         var linked = _cancellationScope.CancellationToken.Link(cancellationToken, out var source);
 
         using (source)
-            return _jsVariableInterop.WaitForVariable(variableName, delay, linked);
+            await _jsVariableInterop.WaitForVariable(variableName, delay, linked);
     }
 
-    public ValueTask DisposeModule(string name, CancellationToken cancellationToken = default)
+    public async ValueTask DisposeModule(string name, CancellationToken cancellationToken = default)
     {
         var linked = _cancellationScope.CancellationToken.Link(cancellationToken, out var source);
 
         using (source)
-            return _moduleImportUtil.DisposeModule(name, linked);
+            await _moduleImportUtil.DisposeModule(name, linked);
     }
 
     public async ValueTask DisposeAsync()
