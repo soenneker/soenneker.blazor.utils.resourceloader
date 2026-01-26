@@ -6,6 +6,8 @@ using Soenneker.Asyncs.Initializers;
 using Soenneker.Blazor.Utils.ModuleImport.Abstract;
 using Soenneker.Blazor.Utils.JsVariable.Abstract;
 using Soenneker.Dictionaries.Singletons;
+using Soenneker.Extensions.CancellationTokens;
+using Soenneker.Utils.CancellationScopes;
 
 namespace Soenneker.Blazor.Utils.ResourceLoader;
 
@@ -26,6 +28,8 @@ public sealed class ResourceLoader : IResourceLoader
 
     private readonly record struct ScriptLoadArgs(string? Integrity, string? CrossOrigin, bool LoadInHead, bool Async, bool Defer);
     private readonly record struct StyleLoadArgs(string? Integrity, string? CrossOrigin, string? Media, string? Type);
+
+    private readonly CancellationScope _cancellationScope = new();
 
     public ResourceLoader(IJSRuntime jsRuntime, IModuleImportUtil moduleImportUtil, IJsVariableInterop jsVariableInterop)
     {
@@ -61,55 +65,85 @@ public sealed class ResourceLoader : IResourceLoader
     public async ValueTask LoadScript(string uri, string? integrity = null, string? crossOrigin = "anonymous", bool loadInHead = false, bool async = false,
         bool defer = false, CancellationToken cancellationToken = default)
     {
-        await _initializer.Init(cancellationToken);
+        var linked = _cancellationScope.CancellationToken.Link(cancellationToken, out var source);
 
-        var args = new ScriptLoadArgs(Integrity: integrity, CrossOrigin: crossOrigin, LoadInHead: loadInHead, Async: async, Defer: defer);
+        using (source)
+        {
+            await _initializer.Init(linked);
 
-        _ = await _scripts.Get(uri, args, cancellationToken);
+            var args = new ScriptLoadArgs(Integrity: integrity, CrossOrigin: crossOrigin, LoadInHead: loadInHead, Async: async, Defer: defer);
+
+            _ = await _scripts.Get(uri, args, linked);
+        }
     }
 
 
     public async ValueTask LoadScriptAndWaitForVariable(string uri, string variableName, string? integrity = null, string? crossOrigin = "anonymous",
         bool loadInHead = false, bool async = false, bool defer = false, CancellationToken cancellationToken = default)
     {
-        await LoadScript(uri, integrity, crossOrigin, loadInHead, async, defer, cancellationToken);
-        await WaitForVariable(variableName, cancellationToken: cancellationToken);
+        var linked = _cancellationScope.CancellationToken.Link(cancellationToken, out var source);
+
+        using (source)
+        {
+            await LoadScript(uri, integrity, crossOrigin, loadInHead, async, defer, linked);
+            await WaitForVariable(variableName, cancellationToken: linked);
+        }
     }
 
     public async ValueTask LoadStyle(string uri, string? integrity, string? crossOrigin = "anonymous", string? media = "all", string? type = "text/css",
         CancellationToken cancellationToken = default)
     {
-        await _initializer.Init(cancellationToken);
+        var linked = _cancellationScope.CancellationToken.Link(cancellationToken, out var source);
 
-        var args = new StyleLoadArgs(Integrity: integrity, CrossOrigin: crossOrigin, Media: media, Type: type);
+        using (source)
+        {
+            await _initializer.Init(linked);
 
-        _ = await _styles.Get(uri, args, cancellationToken);
+            var args = new StyleLoadArgs(Integrity: integrity, CrossOrigin: crossOrigin, Media: media, Type: type);
+
+            _ = await _styles.Get(uri, args, linked);
+        }
     }
 
 
     public ValueTask<IJSObjectReference> ImportModule(string name, CancellationToken cancellationToken = default)
     {
-        return _moduleImportUtil.Import(name, cancellationToken);
+        var linked = _cancellationScope.CancellationToken.Link(cancellationToken, out var source);
+
+        using (source)
+            return _moduleImportUtil.Import(name, linked);
     }
 
     public ValueTask ImportModuleAndWait(string name, CancellationToken cancellationToken = default)
     {
-        return _moduleImportUtil.ImportAndWait(name, cancellationToken);
+        var linked = _cancellationScope.CancellationToken.Link(cancellationToken, out var source);
+
+        using (source)
+            return _moduleImportUtil.ImportAndWait(name, linked);
     }
 
     public ValueTask ImportModuleAndWaitUntilAvailable(string name, string variableName, int delay = 100, CancellationToken cancellationToken = default)
     {
-        return _moduleImportUtil.ImportAndWaitUntilAvailable(name, variableName, delay, cancellationToken);
+        var linked = _cancellationScope.CancellationToken.Link(cancellationToken, out var source);
+
+        using (source)
+            return _moduleImportUtil.ImportAndWaitUntilAvailable(name, variableName, delay, linked);
     }
 
     public ValueTask WaitForVariable(string variableName, int delay = 100, CancellationToken cancellationToken = default)
     {
-        return _jsVariableInterop.WaitForVariable(variableName, delay, cancellationToken);
+        var linked = _cancellationScope.CancellationToken.Link(cancellationToken, out var source);
+
+        using (source)
+            return _jsVariableInterop.WaitForVariable(variableName, delay, linked);
     }
 
     public ValueTask DisposeModule(string name, CancellationToken cancellationToken = default)
     {
-        return _moduleImportUtil.DisposeModule(name, cancellationToken);
+        var linked = _cancellationScope.CancellationToken.Link(cancellationToken, out var source);
+
+        using (source)
+            return _moduleImportUtil.DisposeModule(name, linked);
     }
 
     public async ValueTask DisposeAsync()
@@ -120,5 +154,6 @@ public sealed class ResourceLoader : IResourceLoader
         await _styles.DisposeAsync();
 
         await _initializer.DisposeAsync();
+        await _cancellationScope.DisposeAsync();
     }
 }
