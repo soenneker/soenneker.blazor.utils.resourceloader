@@ -37,7 +37,7 @@ To load a script, use the `LoadScript` method. It injects the file into the DOM.
 await resourceLoader.LoadScript("https://example.com/script.js");
 ```
 
-`LoadScriptAndWaitForVariable` is also available. It waits for a specified JavaScript variable to be available:
+`LoadScriptAndWaitForVariable` is also available as a legacy fallback for third-party scripts that expose globals instead of ES module exports:
 
 ```csharp
 await resourceLoader.LoadScriptAndWaitForVariable("https://example.com/script.js", "variableName");
@@ -59,16 +59,11 @@ To import a JavaScript module, use the `ImportModule` method:
 var module = await resourceLoader.ImportModule("moduleName");
 ```
 
-You probably want `ImportModuleAndWaitUntilAvailable`, as that waits until the module is loaded, and accessible:
-
-```csharp
-// 'ResourceLoader' is the name of the export class
-var module = await resourceLoader.ImportModuleAndWaitUntilAvailable("Soenneker.Blazor.Utils.ResourceLoader/resourceloader.js", "ResourceLoader");
-```
+`ImportModule` already waits for the ES module import to complete, so Soenneker-owned interops should import the module directly and invoke its exports.
 
 ### Waiting for Variables
 
-To wait for a JavaScript variable to be available, use the `WaitForVariable` method:
+To wait for a JavaScript global to be available, use the `WaitForVariable` method:
 
 ```csharp
 await resourceLoader.WaitForVariable("variableName");

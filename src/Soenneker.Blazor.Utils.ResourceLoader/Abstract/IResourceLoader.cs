@@ -31,13 +31,15 @@ public interface IResourceLoader : IAsyncDisposable
     /// <param name="variableName">The name of the JavaScript variable to wait for.</param>
     /// <param name="integrity">The integrity hash of the script for Subresource Integrity (SRI) validation. This parameter is optional.</param>
     /// <param name="defer"></param>
+    /// <param name="delay">The delay in milliseconds between each fallback availability check. The default is 16 milliseconds.</param>
+    /// <param name="timeout">An optional timeout in milliseconds for the fallback wait.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <param name="crossOrigin"></param>
     /// <param name="loadInHead"></param>
     /// <param name="async"></param>
     /// <returns>A task that represents the asynchronous operation. The task completes when the script is loaded and the variable is available or the operation is cancelled.</returns>
     ValueTask LoadScriptAndWaitForVariable(string uri, string variableName, string? integrity = null, string? crossOrigin = "anonymous", bool loadInHead = false, bool async = false,
-        bool defer = false, CancellationToken cancellationToken = default);
+        bool defer = false, int delay = 16, int? timeout = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Imports a JavaScript module by its name.
@@ -56,16 +58,6 @@ public interface IResourceLoader : IAsyncDisposable
     ValueTask ImportModuleAndWait(string name, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Waits until the specified JavaScript module is loaded and JS variable is available (not undefined).
-    /// </summary>
-    /// <param name="name">The name of the script or style to wait for.</param>
-    /// <param name="variableName">The name of the JavaScript variable to check for availability.</param>
-    /// <param name="delay">The delay in milliseconds between each check for the variable's availability. The default is 100 milliseconds.</param>
-    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
-    /// <returns>A task that represents the asynchronous operation. The task completes when the variable is available or the operation is cancelled.</returns>
-    ValueTask ImportModuleAndWaitUntilAvailable(string name, string variableName, int delay = 100, CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Loads a style from the specified URI if it hasn't already been loaded  (through the ResourceLoader)
     /// </summary>
     /// <param name="uri">The URI of the style to load.</param>
@@ -81,11 +73,12 @@ public interface IResourceLoader : IAsyncDisposable
     /// Asynchronously waits until a specified JavaScript variable is available in the global scope.
     /// </summary>
     /// <param name="variableName">The name of the JavaScript variable to wait for.</param>
-    /// <param name="delay">The delay in milliseconds between each availability check. The default is 100 milliseconds.</param>
+    /// <param name="delay">The delay in milliseconds between each availability check. The default is 16 milliseconds.</param>
+    /// <param name="timeout">An optional timeout in milliseconds. If specified, the operation throws when the timeout elapses before the variable becomes available.</param>
     /// <param name="cancellationToken">An optional token to cancel the operation.</param>
     /// <returns>A <see cref="ValueTask"/> that represents the asynchronous operation.</returns>
     /// <remarks>This method ensures the necessary JavaScript is injected and repeatedly checks for the variable's availability until it becomes available or the operation is canceled.</remarks>
-    ValueTask WaitForVariable(string variableName, int delay = 100, CancellationToken cancellationToken = default);
+    ValueTask WaitForVariable(string variableName, int delay = 16, int? timeout = null, CancellationToken cancellationToken = default);
 
     public ValueTask DisposeModule(string name, CancellationToken cancellationToken = default);
 }

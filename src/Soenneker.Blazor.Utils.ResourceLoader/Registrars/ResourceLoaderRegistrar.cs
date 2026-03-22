@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Soenneker.Blazor.Utils.JsVariable.Registrars;
 using Soenneker.Blazor.Utils.ModuleImport.Registrars;
 using Soenneker.Blazor.Utils.ResourceLoader.Abstract;
 
@@ -15,6 +16,7 @@ public static class ResourceLoaderRegistrar
     /// </summary>
     public static IServiceCollection AddResourceLoaderAsScoped(this IServiceCollection services)
     {
+        services.AddJsVariableInteropAsScoped();
         services.AddModuleImportUtilAsScoped().TryAddScoped<IResourceLoader, ResourceLoader>();
 
         return services;
