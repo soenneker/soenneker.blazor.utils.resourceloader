@@ -50,3 +50,4 @@
         <PackageReference Include="Soenneker.Blazor.Utils.JsVariable" Version="4.0.1270" />
     </ItemGroup>
 </Project>
+
