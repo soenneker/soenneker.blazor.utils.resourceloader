@@ -16,8 +16,9 @@ public static class ResourceLoaderRegistrar
     /// </summary>
     public static IServiceCollection AddResourceLoaderAsScoped(this IServiceCollection services)
     {
-        services.AddJsVariableInteropAsScoped();
-        services.AddModuleImportUtilAsScoped().TryAddScoped<IResourceLoader, ResourceLoader>();
+        services.AddJsVariableInteropAsScoped()
+                .AddModuleImportUtilAsScoped()
+                .TryAddScoped<IResourceLoader, ResourceLoader>();
 
         return services;
     }
