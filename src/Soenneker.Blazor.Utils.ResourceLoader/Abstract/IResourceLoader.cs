@@ -25,6 +25,17 @@ public interface IResourceLoader : IAsyncDisposable
     ValueTask LoadScript(string uri, string? integrity = null, string? crossOrigin = "anonymous", bool loadInHead = false, bool async = false, bool defer = false, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Loads an ES module script tag from the specified URI if it hasn't already been loaded.
+    /// </summary>
+    /// <param name="uri">The URI of the module script to load.</param>
+    /// <param name="integrity">Optional integrity hash for static module assets.</param>
+    /// <param name="crossOrigin">The crossorigin mode to apply to the script tag.</param>
+    /// <param name="loadInHead">If true, appends the script to the document head; otherwise appends to the body.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    ValueTask LoadModuleScript(string uri, string? integrity = null, string? crossOrigin = "anonymous", bool loadInHead = false,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Loads a script from the specified URI and waits until the specified JavaScript variable is available.
     /// </summary>
     /// <param name="uri">The URI of the script to load.</param>
@@ -42,12 +53,23 @@ public interface IResourceLoader : IAsyncDisposable
         bool defer = false, int delay = 16, int? timeout = null, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Loads an ES module script and waits until the specified JavaScript global becomes available.
+    /// </summary>
+    ValueTask LoadModuleScriptAndWaitForVariable(string uri, string variableName, string? integrity = null, string? crossOrigin = "anonymous",
+        bool loadInHead = false, int delay = 16, int? timeout = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Imports a JavaScript module by its name.
     /// </summary>
     /// <param name="name">The name of the JavaScript module to import.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains the imported JavaScript module reference.</returns>
     ValueTask<IJSObjectReference> ImportModule(string name, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Imports an external ES module by absolute URI and returns its namespace object.
+    /// </summary>
+    ValueTask<IJSObjectReference> ImportExternalModule(string uri, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Waits until the specified module is loaded.
@@ -81,4 +103,6 @@ public interface IResourceLoader : IAsyncDisposable
     ValueTask WaitForVariable(string variableName, int delay = 16, int? timeout = null, CancellationToken cancellationToken = default);
 
     public ValueTask DisposeModule(string name, CancellationToken cancellationToken = default);
+
+    ValueTask DisposeExternalModule(string uri, CancellationToken cancellationToken = default);
 }

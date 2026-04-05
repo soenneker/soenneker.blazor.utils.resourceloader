@@ -43,6 +43,18 @@ await resourceLoader.LoadScript("https://example.com/script.js");
 await resourceLoader.LoadScriptAndWaitForVariable("https://example.com/script.js", "variableName");
 ```
 
+To load an ES module script tag, use `LoadModuleScript`:
+
+```csharp
+await resourceLoader.LoadModuleScript("https://example.com/module.js");
+```
+
+If that module assigns a global and you need to wait for it, use:
+
+```csharp
+await resourceLoader.LoadModuleScriptAndWaitForVariable("https://example.com/module.js", "myGlobal");
+```
+
 ### Loading Styles
 
 To load a style, use the `LoadStyle` method. It injects the file into the DOM.
@@ -61,6 +73,14 @@ var module = await resourceLoader.ImportModule("moduleName");
 
 `ImportModule` already waits for the ES module import to complete, so Soenneker-owned interops should import the module directly and invoke its exports.
 
+To import an external ES module by absolute URI, use `ImportExternalModule`:
+
+```csharp
+var module = await resourceLoader.ImportExternalModule("https://cdn.jsdelivr.net/npm/some-package/+esm");
+```
+
+This is useful for ESM-first libraries that do not expose browser globals.
+
 ### Waiting for Variables
 
 To wait for a JavaScript global to be available, use the `WaitForVariable` method:
@@ -75,4 +95,10 @@ Be sure to dispose of a module after you're done interacting with it. To dispose
 
 ```csharp
 await resourceLoader.DisposeModule("moduleName");
+```
+
+External modules imported by URL can also be disposed:
+
+```csharp
+await resourceLoader.DisposeExternalModule("https://cdn.jsdelivr.net/npm/some-package/+esm");
 ```

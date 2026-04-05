@@ -1,3 +1,4 @@
+using System;
 using Soenneker.Blazor.Utils.ResourceLoader.Abstract;
 using System.Threading.Tasks;
 using System.Threading;
@@ -19,6 +20,7 @@ public sealed class ResourceLoader : IResourceLoader
 
     private readonly SingletonDictionary<object, ScriptLoadArgs> _scripts;
     private readonly SingletonDictionary<object, StyleLoadArgs> _styles;
+    private readonly SingletonDictionary<ExternalModuleImportItem> _externalModules;
 
     private const string _modulePath = "Soenneker.Blazor.Utils.ResourceLoader/js/resourceloader.js";
 
@@ -31,6 +33,7 @@ public sealed class ResourceLoader : IResourceLoader
 
         _scripts = new SingletonDictionary<object, ScriptLoadArgs>(LoadScript);
         _styles = new SingletonDictionary<object, StyleLoadArgs>(LoadStyle);
+        _externalModules = new SingletonDictionary<ExternalModuleImportItem>(ImportExternalModuleInternal);
     }
 
     private ValueTask<IJSObjectReference> GetResourceLoaderModule(CancellationToken cancellationToken)
@@ -41,7 +44,7 @@ public sealed class ResourceLoader : IResourceLoader
     private async ValueTask<object> LoadScript(string uri, ScriptLoadArgs args, CancellationToken token)
     {
         IJSObjectReference module = await GetResourceLoaderModule(token);
-        await module.InvokeVoidAsync("loadScript", token, uri, args.Integrity, args.CrossOrigin, args.LoadInHead, args.Async, args.Defer);
+        await module.InvokeVoidAsync("loadScript", token, uri, args.Integrity, args.CrossOrigin, args.LoadInHead, args.Async, args.Defer, args.IsModule);
 
         return new object();
     }
@@ -60,7 +63,16 @@ public sealed class ResourceLoader : IResourceLoader
         CancellationToken linked = _cancellationScope.CancellationToken.Link(cancellationToken, out CancellationTokenSource? source);
 
         using (source)
-            await LoadScriptInternal(uri, integrity, crossOrigin, loadInHead, async, defer, linked);
+            await LoadScriptInternal(uri, integrity, crossOrigin, loadInHead, async, defer, false, linked);
+    }
+
+    public async ValueTask LoadModuleScript(string uri, string? integrity = null, string? crossOrigin = "anonymous", bool loadInHead = false,
+        CancellationToken cancellationToken = default)
+    {
+        CancellationToken linked = _cancellationScope.CancellationToken.Link(cancellationToken, out CancellationTokenSource? source);
+
+        using (source)
+            await LoadScriptInternal(uri, integrity, crossOrigin, loadInHead, false, false, true, linked);
     }
 
 
@@ -71,7 +83,19 @@ public sealed class ResourceLoader : IResourceLoader
 
         using (source)
         {
-            await LoadScriptInternal(uri, integrity, crossOrigin, loadInHead, async, defer, linked);
+            await LoadScriptInternal(uri, integrity, crossOrigin, loadInHead, async, defer, false, linked);
+            await WaitForVariableInternal(variableName, delay, timeout, linked);
+        }
+    }
+
+    public async ValueTask LoadModuleScriptAndWaitForVariable(string uri, string variableName, string? integrity = null, string? crossOrigin = "anonymous",
+        bool loadInHead = false, int delay = 16, int? timeout = null, CancellationToken cancellationToken = default)
+    {
+        CancellationToken linked = _cancellationScope.CancellationToken.Link(cancellationToken, out CancellationTokenSource? source);
+
+        using (source)
+        {
+            await LoadScriptInternal(uri, integrity, crossOrigin, loadInHead, false, false, true, linked);
             await WaitForVariableInternal(variableName, delay, timeout, linked);
         }
     }
@@ -92,6 +116,18 @@ public sealed class ResourceLoader : IResourceLoader
 
         using (source)
             return await _moduleImportUtil.Import(name, linked);
+    }
+
+    public async ValueTask<IJSObjectReference> ImportExternalModule(string uri, CancellationToken cancellationToken = default)
+    {
+        CancellationToken linked = _cancellationScope.CancellationToken.Link(cancellationToken, out CancellationTokenSource? source);
+
+        using (source)
+        {
+            ExternalModuleImportItem item = await GetExternalModuleInternal(uri, linked);
+            await item.IsLoaded;
+            return item.ModuleReference!;
+        }
     }
 
     public async ValueTask ImportModuleAndWait(string name, CancellationToken cancellationToken = default)
@@ -118,11 +154,45 @@ public sealed class ResourceLoader : IResourceLoader
             await _moduleImportUtil.DisposeModule(name, linked);
     }
 
-    private async ValueTask LoadScriptInternal(string uri, string? integrity, string? crossOrigin, bool loadInHead, bool async, bool defer,
+    public async ValueTask DisposeExternalModule(string uri, CancellationToken cancellationToken = default)
+    {
+        CancellationToken linked = _cancellationScope.CancellationToken.Link(cancellationToken, out CancellationTokenSource? source);
+
+        using (source)
+        {
+            ExternalModuleImportItem item = await GetExternalModuleInternal(uri, linked);
+            await item.DisposeAsync();
+        }
+    }
+
+    private async ValueTask LoadScriptInternal(string uri, string? integrity, string? crossOrigin, bool loadInHead, bool async, bool defer, bool isModule,
         CancellationToken cancellationToken)
     {
-        var args = new ScriptLoadArgs(Integrity: integrity, CrossOrigin: crossOrigin, LoadInHead: loadInHead, Async: async, Defer: defer);
+        var args = new ScriptLoadArgs(Integrity: integrity, CrossOrigin: crossOrigin, LoadInHead: loadInHead, Async: async, Defer: defer, IsModule: isModule);
         _ = await _scripts.Get(uri, args, cancellationToken);
+    }
+
+    private async ValueTask<ExternalModuleImportItem> ImportExternalModuleInternal(string uri, CancellationToken cancellationToken)
+    {
+        var item = new ExternalModuleImportItem();
+
+        try
+        {
+            IJSObjectReference module = await GetResourceLoaderModule(cancellationToken);
+            item.ModuleReference = await module.InvokeAsync<IJSObjectReference>("importExternalModule", cancellationToken, uri);
+            item.ModuleLoadedTcs.SetResult(true);
+        }
+        catch (Exception ex)
+        {
+            item.ModuleLoadedTcs.SetException(ex);
+        }
+
+        return item;
+    }
+
+    private ValueTask<ExternalModuleImportItem> GetExternalModuleInternal(string uri, CancellationToken cancellationToken)
+    {
+        return _externalModules.Get(uri, cancellationToken);
     }
 
     private async ValueTask LoadStyleInternal(string uri, string? integrity, string? crossOrigin, string? media, string? type, CancellationToken cancellationToken)
@@ -142,6 +212,7 @@ public sealed class ResourceLoader : IResourceLoader
 
         await _scripts.DisposeAsync();
         await _styles.DisposeAsync();
+        await _externalModules.DisposeAsync();
         await _cancellationScope.DisposeAsync();
     }
 }

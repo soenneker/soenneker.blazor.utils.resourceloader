@@ -1,14 +1,16 @@
 const loadedScripts = new Map();
 const loadedStyles = new Map();
+const importedModules = new Map();
 
-function createScriptKey(url, integrity, crossorigin, loadInHead, async, defer) {
+function createScriptKey(url, integrity, crossorigin, loadInHead, async, defer, isModule) {
     return JSON.stringify({
         url,
         integrity: integrity ?? null,
         crossorigin: crossorigin ?? null,
         loadInHead: !!loadInHead,
         async: !!async,
-        defer: !!defer
+        defer: !!defer,
+        isModule: !!isModule
     });
 }
 
@@ -30,8 +32,8 @@ function toErrorMessage(prefix, url, event) {
     return `${prefix}: ${url}${detail}`;
 }
 
-export async function loadScript(url, integrity, crossorigin, loadInHead = false, async = false, defer = false) {
-    const key = createScriptKey(url, integrity, crossorigin, loadInHead, async, defer);
+export async function loadScript(url, integrity, crossorigin, loadInHead = false, async = false, defer = false, isModule = false) {
+    const key = createScriptKey(url, integrity, crossorigin, loadInHead, async, defer, isModule);
 
     if (loadedScripts.has(key)) {
         return loadedScripts.get(key);
@@ -47,6 +49,10 @@ export async function loadScript(url, integrity, crossorigin, loadInHead = false
 
         if (integrity) {
             script.integrity = integrity;
+        }
+
+        if (isModule) {
+            script.type = 'module';
         }
 
         script.async = !!async;
@@ -65,6 +71,22 @@ export async function loadScript(url, integrity, crossorigin, loadInHead = false
         loadedScripts.delete(key);
         throw error;
     }
+}
+
+export async function importExternalModule(url) {
+    if (importedModules.has(url)) {
+        return importedModules.get(url);
+    }
+
+    const promise = import(url)
+        .catch(error => {
+            importedModules.delete(url);
+            throw error;
+        });
+
+    importedModules.set(url, promise);
+
+    return promise;
 }
 
 export async function loadStyle(url, integrity, crossorigin, media = 'all', type = 'text/css') {
