@@ -38,7 +38,7 @@ public sealed class ResourceLoader : IResourceLoader
 
         try
         {
-            IJSObjectReference module = await _moduleImportUtil.ImportContentModule(_modulePath, cancellationToken);
+            IJSObjectReference module = await _moduleImportUtil.GetContentModuleReference(_modulePath, cancellationToken);
 
             await module.InvokeVoidAsync("loadScript", cancellationToken, uri, args.Integrity, args.CrossOrigin, args.LoadInHead, args.Async, args.Defer,
                 args.IsModule);
@@ -64,7 +64,7 @@ public sealed class ResourceLoader : IResourceLoader
 
         try
         {
-            IJSObjectReference module = await _moduleImportUtil.ImportContentModule(_modulePath, cancellationToken);
+            IJSObjectReference module = await _moduleImportUtil.GetContentModuleReference(_modulePath, cancellationToken);
 
             await module.InvokeVoidAsync("loadStyle", cancellationToken, uri, args.Integrity, args.CrossOrigin, args.Media, args.Type);
 
