@@ -59,27 +59,6 @@ public interface IResourceLoader : IAsyncDisposable
         bool loadInHead = false, int delay = 16, int? timeout = null, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Imports a JavaScript module by its name.
-    /// </summary>
-    /// <param name="name">The name of the JavaScript module to import.</param>
-    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
-    /// <returns>A task that represents the asynchronous operation. The task result contains the imported JavaScript module reference.</returns>
-    ValueTask<IJSObjectReference> ImportModule(string name, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Imports an external ES module by absolute URI and returns its namespace object.
-    /// </summary>
-    ValueTask<IJSObjectReference> ImportExternalModule(string uri, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Waits until the specified module is loaded.
-    /// </summary>
-    /// <param name="name">The name of the JavaScript module.</param>
-    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    ValueTask ImportModuleAndWait(string name, CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Loads a style from the specified URI if it hasn't already been loaded  (through the ResourceLoader)
     /// </summary>
     /// <param name="uri">The URI of the style to load.</param>
@@ -101,8 +80,4 @@ public interface IResourceLoader : IAsyncDisposable
     /// <returns>A <see cref="ValueTask"/> that represents the asynchronous operation.</returns>
     /// <remarks>This method ensures the necessary JavaScript is injected and repeatedly checks for the variable's availability until it becomes available or the operation is canceled.</remarks>
     ValueTask WaitForVariable(string variableName, int delay = 16, int? timeout = null, CancellationToken cancellationToken = default);
-
-    public ValueTask DisposeModule(string name, CancellationToken cancellationToken = default);
-
-    ValueTask DisposeExternalModule(string uri, CancellationToken cancellationToken = default);
 }

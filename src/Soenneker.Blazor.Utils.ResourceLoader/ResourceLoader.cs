@@ -1,29 +1,26 @@
 using System;
-using Soenneker.Blazor.Utils.ResourceLoader.Abstract;
-using System.Threading.Tasks;
 using System.Threading;
-using Soenneker.Blazor.Utils.ModuleImport.Abstract;
+using System.Threading.Tasks;
+using Microsoft.JSInterop;
 using Soenneker.Blazor.Utils.JsVariable.Abstract;
+using Soenneker.Blazor.Utils.ModuleImport.Abstract;
+using Soenneker.Blazor.Utils.ResourceLoader.Abstract;
+using Soenneker.Blazor.Utils.ResourceLoader.Dtos;
 using Soenneker.Dictionaries.Singletons;
 using Soenneker.Extensions.CancellationTokens;
 using Soenneker.Utils.CancellationScopes;
-using Microsoft.JSInterop;
-using Soenneker.Blazor.Utils.ResourceLoader.Dtos;
 
 namespace Soenneker.Blazor.Utils.ResourceLoader;
 
-///<inheritdoc cref="IResourceLoader"/>
+/// <inheritdoc cref="IResourceLoader"/>
 public sealed class ResourceLoader : IResourceLoader
 {
-    private readonly IModuleImportUtil _moduleImportUtil;
-    private readonly IJsVariableInterop _jsVariableInterop;
-
-    private readonly SingletonDictionary<object, ScriptLoadArgs> _scripts;
-    private readonly SingletonDictionary<object, StyleLoadArgs> _styles;
-    private readonly SingletonDictionary<ExternalModuleImportItem> _externalModules;
-
     private const string _modulePath = "Soenneker.Blazor.Utils.ResourceLoader/js/resourceloader.js";
 
+    private readonly IModuleImportUtil _moduleImportUtil;
+    private readonly IJsVariableInterop _jsVariableInterop;
+    private readonly SingletonDictionary<ResourceLoadItem, ScriptLoadArgs> _scripts;
+    private readonly SingletonDictionary<ResourceLoadItem, StyleLoadArgs> _styles;
     private readonly CancellationScope _cancellationScope = new();
 
     public ResourceLoader(IModuleImportUtil moduleImportUtil, IJsVariableInterop jsVariableInterop)
@@ -31,30 +28,59 @@ public sealed class ResourceLoader : IResourceLoader
         _moduleImportUtil = moduleImportUtil;
         _jsVariableInterop = jsVariableInterop;
 
-        _scripts = new SingletonDictionary<object, ScriptLoadArgs>(LoadScript);
-        _styles = new SingletonDictionary<object, StyleLoadArgs>(LoadStyle);
-        _externalModules = new SingletonDictionary<ExternalModuleImportItem>(ImportExternalModuleInternal);
+        _scripts = new SingletonDictionary<ResourceLoadItem, ScriptLoadArgs>(LoadScriptCore);
+        _styles = new SingletonDictionary<ResourceLoadItem, StyleLoadArgs>(LoadStyleCore);
     }
 
-    private ValueTask<IJSObjectReference> GetResourceLoaderModule(CancellationToken cancellationToken)
+    private async ValueTask<ResourceLoadItem> LoadScriptCore(string uri, ScriptLoadArgs args, CancellationToken cancellationToken)
     {
-        return _moduleImportUtil.Import(_modulePath, cancellationToken);
+        var item = new ResourceLoadItem();
+
+        try
+        {
+            IJSObjectReference module = await _moduleImportUtil.ImportContentModule(_modulePath, cancellationToken);
+
+            await module.InvokeVoidAsync("loadScript", cancellationToken, uri, args.Integrity, args.CrossOrigin, args.LoadInHead, args.Async, args.Defer,
+                args.IsModule);
+
+            item.LoadedTcs.TrySetResult(true);
+            return item;
+        }
+        catch (OperationCanceledException ex)
+        {
+            item.LoadedTcs.TrySetCanceled(ex.CancellationToken);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            item.LoadedTcs.TrySetException(ex);
+            throw;
+        }
     }
 
-    private async ValueTask<object> LoadScript(string uri, ScriptLoadArgs args, CancellationToken token)
+    private async ValueTask<ResourceLoadItem> LoadStyleCore(string uri, StyleLoadArgs args, CancellationToken cancellationToken)
     {
-        IJSObjectReference module = await GetResourceLoaderModule(token);
-        await module.InvokeVoidAsync("loadScript", token, uri, args.Integrity, args.CrossOrigin, args.LoadInHead, args.Async, args.Defer, args.IsModule);
+        var item = new ResourceLoadItem();
 
-        return new object();
-    }
+        try
+        {
+            IJSObjectReference module = await _moduleImportUtil.ImportContentModule(_modulePath, cancellationToken);
 
-    private async ValueTask<object> LoadStyle(string uri, StyleLoadArgs args, CancellationToken token)
-    {
-        IJSObjectReference module = await GetResourceLoaderModule(token);
-        await module.InvokeVoidAsync("loadStyle", token, uri, args.Integrity, args.CrossOrigin, args.Media, args.Type);
+            await module.InvokeVoidAsync("loadStyle", cancellationToken, uri, args.Integrity, args.CrossOrigin, args.Media, args.Type);
 
-        return new object();
+            item.LoadedTcs.TrySetResult(true);
+            return item;
+        }
+        catch (OperationCanceledException ex)
+        {
+            item.LoadedTcs.TrySetCanceled(ex.CancellationToken);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            item.LoadedTcs.TrySetException(ex);
+            throw;
+        }
     }
 
     public async ValueTask LoadScript(string uri, string? integrity = null, string? crossOrigin = "anonymous", bool loadInHead = false, bool async = false,
@@ -63,7 +89,9 @@ public sealed class ResourceLoader : IResourceLoader
         CancellationToken linked = _cancellationScope.CancellationToken.Link(cancellationToken, out CancellationTokenSource? source);
 
         using (source)
+        {
             await LoadScriptInternal(uri, integrity, crossOrigin, loadInHead, async, defer, false, linked);
+        }
     }
 
     public async ValueTask LoadModuleScript(string uri, string? integrity = null, string? crossOrigin = "anonymous", bool loadInHead = false,
@@ -72,9 +100,10 @@ public sealed class ResourceLoader : IResourceLoader
         CancellationToken linked = _cancellationScope.CancellationToken.Link(cancellationToken, out CancellationTokenSource? source);
 
         using (source)
+        {
             await LoadScriptInternal(uri, integrity, crossOrigin, loadInHead, false, false, true, linked);
+        }
     }
-
 
     public async ValueTask LoadScriptAndWaitForVariable(string uri, string variableName, string? integrity = null, string? crossOrigin = "anonymous",
         bool loadInHead = false, bool async = false, bool defer = false, int delay = 16, int? timeout = null, CancellationToken cancellationToken = default)
@@ -84,7 +113,7 @@ public sealed class ResourceLoader : IResourceLoader
         using (source)
         {
             await LoadScriptInternal(uri, integrity, crossOrigin, loadInHead, async, defer, false, linked);
-            await WaitForVariableInternal(variableName, delay, timeout, linked);
+            await _jsVariableInterop.WaitForVariable(variableName, delay, timeout, linked);
         }
     }
 
@@ -96,46 +125,19 @@ public sealed class ResourceLoader : IResourceLoader
         using (source)
         {
             await LoadScriptInternal(uri, integrity, crossOrigin, loadInHead, false, false, true, linked);
-            await WaitForVariableInternal(variableName, delay, timeout, linked);
+            await _jsVariableInterop.WaitForVariable(variableName, delay, timeout, linked);
         }
     }
 
-    public async ValueTask LoadStyle(string uri, string? integrity, string? crossOrigin = "anonymous", string? media = "all", string? type = "text/css",
+    public async ValueTask LoadStyle(string uri, string? integrity = null, string? crossOrigin = "anonymous", string? media = "all", string? type = "text/css",
         CancellationToken cancellationToken = default)
     {
         CancellationToken linked = _cancellationScope.CancellationToken.Link(cancellationToken, out CancellationTokenSource? source);
 
         using (source)
-            await LoadStyleInternal(uri, integrity, crossOrigin, media, type, linked);
-    }
-
-
-    public async ValueTask<IJSObjectReference> ImportModule(string name, CancellationToken cancellationToken = default)
-    {
-        CancellationToken linked = _cancellationScope.CancellationToken.Link(cancellationToken, out CancellationTokenSource? source);
-
-        using (source)
-            return await _moduleImportUtil.Import(name, linked);
-    }
-
-    public async ValueTask<IJSObjectReference> ImportExternalModule(string uri, CancellationToken cancellationToken = default)
-    {
-        CancellationToken linked = _cancellationScope.CancellationToken.Link(cancellationToken, out CancellationTokenSource? source);
-
-        using (source)
         {
-            ExternalModuleImportItem item = await GetExternalModuleInternal(uri, linked);
-            await item.IsLoaded;
-            return item.ModuleReference!;
+            await LoadStyleInternal(uri, integrity, crossOrigin, media, type, linked);
         }
-    }
-
-    public async ValueTask ImportModuleAndWait(string name, CancellationToken cancellationToken = default)
-    {
-        CancellationToken linked = _cancellationScope.CancellationToken.Link(cancellationToken, out CancellationTokenSource? source);
-
-        using (source)
-            _ = await _moduleImportUtil.Import(name, linked);
     }
 
     public async ValueTask WaitForVariable(string variableName, int delay = 16, int? timeout = null, CancellationToken cancellationToken = default)
@@ -143,25 +145,8 @@ public sealed class ResourceLoader : IResourceLoader
         CancellationToken linked = _cancellationScope.CancellationToken.Link(cancellationToken, out CancellationTokenSource? source);
 
         using (source)
-            await WaitForVariableInternal(variableName, delay, timeout, linked);
-    }
-
-    public async ValueTask DisposeModule(string name, CancellationToken cancellationToken = default)
-    {
-        CancellationToken linked = _cancellationScope.CancellationToken.Link(cancellationToken, out CancellationTokenSource? source);
-
-        using (source)
-            await _moduleImportUtil.DisposeModule(name, linked);
-    }
-
-    public async ValueTask DisposeExternalModule(string uri, CancellationToken cancellationToken = default)
-    {
-        CancellationToken linked = _cancellationScope.CancellationToken.Link(cancellationToken, out CancellationTokenSource? source);
-
-        using (source)
         {
-            ExternalModuleImportItem item = await GetExternalModuleInternal(uri, linked);
-            await item.DisposeAsync();
+            await _jsVariableInterop.WaitForVariable(variableName, delay, timeout, linked);
         }
     }
 
@@ -169,50 +154,25 @@ public sealed class ResourceLoader : IResourceLoader
         CancellationToken cancellationToken)
     {
         var args = new ScriptLoadArgs(Integrity: integrity, CrossOrigin: crossOrigin, LoadInHead: loadInHead, Async: async, Defer: defer, IsModule: isModule);
-        _ = await _scripts.Get(uri, args, cancellationToken);
+
+        ResourceLoadItem item = await _scripts.Get(uri, args, cancellationToken);
+        await item.Loaded.WaitAsync(cancellationToken);
     }
 
-    private async ValueTask<ExternalModuleImportItem> ImportExternalModuleInternal(string uri, CancellationToken cancellationToken)
-    {
-        var item = new ExternalModuleImportItem();
-
-        try
-        {
-            IJSObjectReference module = await GetResourceLoaderModule(cancellationToken);
-            item.ModuleReference = await module.InvokeAsync<IJSObjectReference>("importExternalModule", cancellationToken, uri);
-            item.ModuleLoadedTcs.SetResult(true);
-        }
-        catch (Exception ex)
-        {
-            item.ModuleLoadedTcs.SetException(ex);
-        }
-
-        return item;
-    }
-
-    private ValueTask<ExternalModuleImportItem> GetExternalModuleInternal(string uri, CancellationToken cancellationToken)
-    {
-        return _externalModules.Get(uri, cancellationToken);
-    }
-
-    private async ValueTask LoadStyleInternal(string uri, string? integrity, string? crossOrigin, string? media, string? type, CancellationToken cancellationToken)
+    private async ValueTask LoadStyleInternal(string uri, string? integrity, string? crossOrigin, string? media, string? type,
+        CancellationToken cancellationToken)
     {
         var args = new StyleLoadArgs(Integrity: integrity, CrossOrigin: crossOrigin, Media: media, Type: type);
-        _ = await _styles.Get(uri, args, cancellationToken);
-    }
 
-    private ValueTask WaitForVariableInternal(string variableName, int delay, int? timeout, CancellationToken cancellationToken)
-    {
-        return _jsVariableInterop.WaitForVariable(variableName, delay, timeout, cancellationToken);
+        ResourceLoadItem item = await _styles.Get(uri, args, cancellationToken);
+        await item.Loaded.WaitAsync(cancellationToken);
     }
 
     public async ValueTask DisposeAsync()
     {
-        await _moduleImportUtil.DisposeModule(_modulePath);
-
+        await _cancellationScope.DisposeAsync();
         await _scripts.DisposeAsync();
         await _styles.DisposeAsync();
-        await _externalModules.DisposeAsync();
-        await _cancellationScope.DisposeAsync();
+        await _moduleImportUtil.DisposeContentModule(_modulePath);
     }
 }
