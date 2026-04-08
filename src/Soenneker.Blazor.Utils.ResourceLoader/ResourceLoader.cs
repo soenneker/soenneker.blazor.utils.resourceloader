@@ -8,6 +8,7 @@ using Soenneker.Blazor.Utils.ResourceLoader.Abstract;
 using Soenneker.Blazor.Utils.ResourceLoader.Dtos;
 using Soenneker.Dictionaries.Singletons;
 using Soenneker.Extensions.CancellationTokens;
+using Soenneker.Extensions.ValueTask;
 using Soenneker.Utils.CancellationScopes;
 
 namespace Soenneker.Blazor.Utils.ResourceLoader;
@@ -170,9 +171,9 @@ public sealed class ResourceLoader : IResourceLoader
 
     public async ValueTask DisposeAsync()
     {
-        await _cancellationScope.DisposeAsync();
-        await _scripts.DisposeAsync();
-        await _styles.DisposeAsync();
-        await _moduleImportUtil.DisposeContentModule(_modulePath);
+        await _cancellationScope.DisposeAsync().NoSync();
+        await _scripts.DisposeAsync().NoSync();
+        await _styles.DisposeAsync().NoSync();
+        await _moduleImportUtil.DisposeContentModule(_modulePath).NoSync();
     }
 }
