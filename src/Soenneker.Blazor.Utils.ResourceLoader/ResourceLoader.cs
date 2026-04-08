@@ -15,7 +15,7 @@ namespace Soenneker.Blazor.Utils.ResourceLoader;
 /// <inheritdoc cref="IResourceLoader"/>
 public sealed class ResourceLoader : IResourceLoader
 {
-    private const string _modulePath = "_content/Soenneker.Blazor.Utils.ResourceLoader/js/resourceloader.js";
+    private const string _modulePath = "./_content/Soenneker.Blazor.Utils.ResourceLoader/js/resourceloader.js";
 
     private readonly IModuleImportUtil _moduleImportUtil;
     private readonly IJsVariableInterop _jsVariableInterop;
