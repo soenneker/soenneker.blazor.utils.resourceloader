@@ -1,21 +1,19 @@
 using Soenneker.Blazor.Utils.ResourceLoader.Abstract;
-using Soenneker.Tests.FixturedUnit;
-using Xunit;
-
+using Soenneker.Tests.HostedUnit;
 
 namespace Soenneker.Blazor.Utils.ResourceLoader.Tests;
 
-[Collection("Collection")]
-public class ResourceLoaderTests : FixturedUnitTest
+[ClassDataSource<Host>(Shared = SharedType.PerTestSession)]
+public class ResourceLoaderTests : HostedUnitTest
 {
     private readonly IResourceLoader _util;
 
-    public ResourceLoaderTests(Fixture fixture, ITestOutputHelper output) : base(fixture, output)
+    public ResourceLoaderTests(Host host) : base(host)
     {
         _util = Resolve<IResourceLoader>(true);
     }
 
-    [Fact]
+    [Test]
     public void Default()
     {
 
