@@ -12,10 +12,28 @@ function validateAbsoluteUrl(url, parameterName) {
     }
 
     try {
-        return new URL(url, document.baseURI).href;
+        const parsed = new URL(url, document.baseURI);
+
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+            throw new Error(`${parameterName} must use HTTP or HTTPS.`);
+        }
+
+        if (parsed.username || parsed.password) {
+            throw new Error(`${parameterName} must not contain credentials.`);
+        }
+
+        return parsed.href;
     } catch {
-        throw new Error(`${parameterName} must be a valid URL.`);
+        throw new Error(`${parameterName} must be a valid HTTP(S) URL without embedded credentials.`);
     }
+}
+
+function validateCrossOrigin(value) {
+    if (value == null || value === '' || value === 'anonymous' || value === 'use-credentials') {
+        return;
+    }
+
+    throw new Error("crossorigin must be empty, 'anonymous', or 'use-credentials'.");
 }
 
 function getScriptParent(loadInHead) {
@@ -54,6 +72,7 @@ function attachLoadPromise(element, url, failurePrefix, onSuccess, onFailure) {
 
 export function loadScript(url, integrity, crossorigin, loadInHead = false, async = false, defer = false, isModule = false) {
     url = validateAbsoluteUrl(url, 'url');
+    validateCrossOrigin(crossorigin);
 
     let entry = scripts.get(url);
 
@@ -106,17 +125,28 @@ export function loadScript(url, integrity, crossorigin, loadInHead = false, asyn
         url,
         'Failed to load script',
         () => { script.dataset.soennekerLoaded = 'true'; },
-        () => { scripts.delete(url); }
+        () => {
+            scripts.delete(url);
+            script.remove();
+        }
     );
 
     scripts.set(url, entry);
-    getScriptParent(loadInHead).appendChild(script);
+
+    try {
+        getScriptParent(loadInHead).appendChild(script);
+    } catch (error) {
+        scripts.delete(url);
+        script.remove();
+        throw error;
+    }
 
     return entry.promise;
 }
 
 export function loadStyle(url, integrity, crossorigin, media = 'all', type = 'text/css') {
     url = validateAbsoluteUrl(url, 'url');
+    validateCrossOrigin(crossorigin);
 
     let entry = styles.get(url);
 
@@ -167,11 +197,21 @@ export function loadStyle(url, integrity, crossorigin, media = 'all', type = 'te
         url,
         'Failed to load stylesheet',
         () => { link.dataset.soennekerLoaded = 'true'; },
-        () => { styles.delete(url); }
+        () => {
+            styles.delete(url);
+            link.remove();
+        }
     );
 
     styles.set(url, entry);
-    document.head.appendChild(link);
+
+    try {
+        document.head.appendChild(link);
+    } catch (error) {
+        styles.delete(url);
+        link.remove();
+        throw error;
+    }
 
     return entry.promise;
 }
