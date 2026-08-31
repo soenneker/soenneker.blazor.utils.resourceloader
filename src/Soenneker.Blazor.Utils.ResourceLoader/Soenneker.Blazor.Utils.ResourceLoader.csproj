@@ -44,6 +44,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Soenneker.Blazor.Utils.JsVariable" Version="4.0.1367" />
+        <PackageReference Include="Soenneker.Blazor.Utils.JsVariable" Version="4.0.1368" />
     </ItemGroup>
 </Project>
