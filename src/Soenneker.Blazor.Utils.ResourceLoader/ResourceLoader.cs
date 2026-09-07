@@ -7,11 +7,10 @@ using Soenneker.Blazor.Utils.ModuleImport.Abstract;
 using Soenneker.Blazor.Utils.ResourceLoader.Abstract;
 using Soenneker.Blazor.Utils.ResourceLoader.Dtos;
 using Soenneker.Atomics.ValueBools;
-using Soenneker.Dictionaries.Singletons;
+using Soenneker.Dictionaries.SingletonKeys;
 using Soenneker.Extensions.CancellationTokens;
 using Soenneker.Extensions.ValueTask;
 using Soenneker.Utils.CancellationScopes;
-using System.Text.Json;
 
 namespace Soenneker.Blazor.Utils.ResourceLoader;
 
@@ -22,8 +21,8 @@ public sealed class ResourceLoader : IResourceLoader
 
     private readonly IModuleImportUtil _moduleImportUtil;
     private readonly IJsVariableInterop _jsVariableInterop;
-    private readonly SingletonDictionary<ResourceLoadItem, ScriptLoadArgs> _scripts;
-    private readonly SingletonDictionary<ResourceLoadItem, StyleLoadArgs> _styles;
+    private readonly SingletonKeyDictionary<ScriptLoadArgs, ResourceLoadItem> _scripts;
+    private readonly SingletonKeyDictionary<StyleLoadArgs, ResourceLoadItem> _styles;
     private readonly CancellationScope _cancellationScope = new();
     private ValueAtomicBool _disposed;
 
@@ -32,11 +31,11 @@ public sealed class ResourceLoader : IResourceLoader
         _moduleImportUtil = moduleImportUtil ?? throw new ArgumentNullException(nameof(moduleImportUtil));
         _jsVariableInterop = jsVariableInterop ?? throw new ArgumentNullException(nameof(jsVariableInterop));
 
-        _scripts = new SingletonDictionary<ResourceLoadItem, ScriptLoadArgs>(LoadScriptCore);
-        _styles = new SingletonDictionary<ResourceLoadItem, StyleLoadArgs>(LoadStyleCore);
+        _scripts = new SingletonKeyDictionary<ScriptLoadArgs, ResourceLoadItem>(LoadScriptCore);
+        _styles = new SingletonKeyDictionary<StyleLoadArgs, ResourceLoadItem>(LoadStyleCore);
     }
 
-    private async ValueTask<ResourceLoadItem> LoadScriptCore(string _, ScriptLoadArgs args, CancellationToken cancellationToken)
+    private async ValueTask<ResourceLoadItem> LoadScriptCore(ScriptLoadArgs args, CancellationToken cancellationToken)
     {
         var item = new ResourceLoadItem();
 
@@ -62,7 +61,7 @@ public sealed class ResourceLoader : IResourceLoader
         }
     }
 
-    private async ValueTask<ResourceLoadItem> LoadStyleCore(string _, StyleLoadArgs args, CancellationToken cancellationToken)
+    private async ValueTask<ResourceLoadItem> LoadStyleCore(StyleLoadArgs args, CancellationToken cancellationToken)
     {
         var item = new ResourceLoadItem();
 
@@ -164,9 +163,8 @@ public sealed class ResourceLoader : IResourceLoader
 
         var args = new ScriptLoadArgs(Uri: uri, Integrity: integrity, CrossOrigin: crossOrigin, LoadInHead: loadInHead, Async: async, Defer: defer,
             IsModule: isModule);
-        string key = JsonSerializer.Serialize(args);
 
-        ResourceLoadItem item = await _scripts.Get(key, args, cancellationToken);
+        ResourceLoadItem item = await _scripts.Get(args, cancellationToken);
         await item.Loaded.WaitAsync(cancellationToken);
     }
 
@@ -178,9 +176,8 @@ public sealed class ResourceLoader : IResourceLoader
         ValidateCrossOrigin(crossOrigin);
 
         var args = new StyleLoadArgs(Uri: uri, Integrity: integrity, CrossOrigin: crossOrigin, Media: media, Type: type);
-        string key = JsonSerializer.Serialize(args);
 
-        ResourceLoadItem item = await _styles.Get(key, args, cancellationToken);
+        ResourceLoadItem item = await _styles.Get(args, cancellationToken);
         await item.Loaded.WaitAsync(cancellationToken);
     }
 
