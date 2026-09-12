@@ -40,33 +40,35 @@ function getScriptParent(loadInHead) {
     return loadInHead ? document.head : (document.body || document.head || document.documentElement);
 }
 
-function attachLoadPromise(element, url, failurePrefix, onSuccess, onFailure) {
+function attachLoadPromise(element, url, failurePrefix, cache, parent) {
     return new Promise((resolve, reject) => {
-        const onLoad = () => {
+        const cleanup = () => {
             element.removeEventListener('load', onLoad);
             element.removeEventListener('error', onError);
-
-            if (onSuccess) {
-                onSuccess();
-            }
-
+        };
+        const fail = (error) => {
+            cleanup();
+            cache.delete(url);
+            element.remove();
+            reject(error);
+        };
+        const onLoad = () => {
+            cleanup();
+            element.dataset.soennekerLoaded = 'true';
             resolve(url);
         };
-
         const onError = (event) => {
-            element.removeEventListener('load', onLoad);
-            element.removeEventListener('error', onError);
-
-            if (onFailure) {
-                onFailure();
-            }
-
             const detail = event instanceof ErrorEvent && event.message ? `: ${event.message}` : '';
-            reject(new Error(`${failurePrefix}: ${url}${detail}`));
+            fail(new Error(`${failurePrefix}: ${url}${detail}`));
         };
 
-        element.addEventListener('load', onLoad, { once: true });
-        element.addEventListener('error', onError, { once: true });
+        element.addEventListener('load', onLoad);
+        element.addEventListener('error', onError);
+        try {
+            parent.appendChild(element);
+        } catch (error) {
+            fail(error);
+        }
     });
 }
 
@@ -116,30 +118,11 @@ export function loadScript(url, integrity, crossorigin, loadInHead = false, asyn
         async: !!async,
         defer: !!defer,
         isModule: !!isModule,
-        element: script,
         promise: null
     };
 
-    entry.promise = attachLoadPromise(
-        script,
-        url,
-        'Failed to load script',
-        () => { script.dataset.soennekerLoaded = 'true'; },
-        () => {
-            scripts.delete(url);
-            script.remove();
-        }
-    );
-
     scripts.set(url, entry);
-
-    try {
-        getScriptParent(loadInHead).appendChild(script);
-    } catch (error) {
-        scripts.delete(url);
-        script.remove();
-        throw error;
-    }
+    entry.promise = attachLoadPromise(script, url, 'Failed to load script', scripts, getScriptParent(loadInHead));
 
     return entry.promise;
 }
@@ -188,30 +171,11 @@ export function loadStyle(url, integrity, crossorigin, media = 'all', type = 'te
         crossorigin: normalizeString(crossorigin),
         media: normalizeString(media),
         type: normalizeString(type),
-        element: link,
         promise: null
     };
 
-    entry.promise = attachLoadPromise(
-        link,
-        url,
-        'Failed to load stylesheet',
-        () => { link.dataset.soennekerLoaded = 'true'; },
-        () => {
-            styles.delete(url);
-            link.remove();
-        }
-    );
-
     styles.set(url, entry);
-
-    try {
-        document.head.appendChild(link);
-    } catch (error) {
-        styles.delete(url);
-        link.remove();
-        throw error;
-    }
+    entry.promise = attachLoadPromise(link, url, 'Failed to load stylesheet', styles, document.head);
 
     return entry.promise;
 }
