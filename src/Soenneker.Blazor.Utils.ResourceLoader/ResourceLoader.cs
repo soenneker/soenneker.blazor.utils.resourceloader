@@ -1,4 +1,3 @@
-using Soenneker.Asyncs.Locks;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,7 +25,7 @@ public sealed class ResourceLoader : IResourceLoader
     private readonly CancellationTokenSource _lifetimeCancellation = new();
     private readonly CancellationToken _lifetimeToken;
     private ValueAtomicBool _disposed;
-    private readonly AsyncLock _lifetimeGate = new();
+    private readonly Lock _lifetimeGate = new();
 
     public ResourceLoader(IModuleImportUtil moduleImportUtil, IJsVariableInterop jsVariableInterop)
     {
@@ -123,7 +122,7 @@ public sealed class ResourceLoader : IResourceLoader
 
     private ResourceCache<ScriptLoadArgs> CreateScripts()
     {
-        using (_lifetimeGate.LockSync())
+        lock (_lifetimeGate)
         {
             ThrowIfDisposed();
             return _scripts ??= new ResourceCache<ScriptLoadArgs>(LoadScriptCore);
@@ -132,7 +131,7 @@ public sealed class ResourceLoader : IResourceLoader
 
     private ResourceCache<StyleLoadArgs> CreateStyles()
     {
-        using (_lifetimeGate.LockSync())
+        lock (_lifetimeGate)
         {
             ThrowIfDisposed();
             return _styles ??= new ResourceCache<StyleLoadArgs>(LoadStyleCore);
@@ -170,7 +169,7 @@ public sealed class ResourceLoader : IResourceLoader
 
     private CancellationToken GetLifetimeToken()
     {
-        using (_lifetimeGate.LockSync())
+        lock (_lifetimeGate)
         {
             ObjectDisposedException.ThrowIf(_disposed.Value, this);
             return _lifetimeToken;
@@ -195,7 +194,7 @@ public sealed class ResourceLoader : IResourceLoader
 
     public async ValueTask DisposeAsync()
     {
-        using (await _lifetimeGate.Lock().ConfigureAwait(false))
+        lock (_lifetimeGate)
         {
             if (!_disposed.TrySetTrue())
                 return;

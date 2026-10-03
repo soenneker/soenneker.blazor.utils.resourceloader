@@ -1,4 +1,3 @@
-using Soenneker.Asyncs.Locks;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -10,7 +9,7 @@ namespace Soenneker.Blazor.Utils.ResourceLoader;
 internal sealed class ResourceCache<TArgs>(Func<TArgs, CancellationToken, ValueTask> load) : IAsyncDisposable where TArgs : notnull
 {
     private readonly ConcurrentDictionary<TArgs, Task> _entries = new(1, 4);
-    private readonly AsyncLock _gate = new();
+    private readonly Lock _gate = new();
     private bool _disposed;
 
     internal bool IsLoaded(TArgs args)
@@ -25,7 +24,7 @@ internal sealed class ResourceCache<TArgs>(Func<TArgs, CancellationToken, ValueT
         TaskCompletionSource? completion = null;
         Task entry;
         bool created = false;
-        using (await _gate.Lock(cancellationToken).ConfigureAwait(false))
+        lock (_gate)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
             if (!_entries.TryGetValue(args, out entry!))
@@ -65,7 +64,7 @@ internal sealed class ResourceCache<TArgs>(Func<TArgs, CancellationToken, ValueT
     public async ValueTask DisposeAsync()
     {
         ICollection<Task> entries;
-        using (await _gate.Lock().ConfigureAwait(false))
+        lock (_gate)
         {
             if (_disposed)
                 return;
