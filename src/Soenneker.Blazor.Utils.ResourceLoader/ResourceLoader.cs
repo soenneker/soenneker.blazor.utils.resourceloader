@@ -2,6 +2,9 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.JSInterop;
+using Soenneker.Asyncs.Locks;
+using Soenneker.Extensions.Task;
+using Soenneker.Extensions.ValueTask;
 using Soenneker.Blazor.Utils.JsVariable.Abstract;
 using Soenneker.Blazor.Utils.ModuleImport.Abstract;
 using Soenneker.Blazor.Utils.ResourceLoader.Abstract;
@@ -25,7 +28,7 @@ public sealed class ResourceLoader : IResourceLoader
     private readonly CancellationTokenSource _lifetimeCancellation = new();
     private readonly CancellationToken _lifetimeToken;
     private ValueAtomicBool _disposed;
-    private readonly Lock _lifetimeGate = new();
+    private readonly AsyncLock _lifetimeGate = new();
 
     public ResourceLoader(IModuleImportUtil moduleImportUtil, IJsVariableInterop jsVariableInterop)
     {
@@ -83,7 +86,7 @@ public sealed class ResourceLoader : IResourceLoader
     public async ValueTask WaitForVariable(string variableName, int delay = 16, int? timeout = null, CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
-        CancellationToken linked = GetLifetimeToken().Link(cancellationToken, out CancellationTokenSource? source);
+        CancellationToken linked = (await GetLifetimeToken(cancellationToken)).Link(cancellationToken, out CancellationTokenSource? source);
 
         using (source)
         {
@@ -91,7 +94,7 @@ public sealed class ResourceLoader : IResourceLoader
         }
     }
 
-    private ValueTask LoadScriptInternal(string uri, string? integrity, string? crossOrigin, bool loadInHead, bool async, bool defer, bool isModule,
+    private async ValueTask LoadScriptInternal(string uri, string? integrity, string? crossOrigin, bool loadInHead, bool async, bool defer, bool isModule,
         CancellationToken cancellationToken)
     {
         ThrowIfDisposed();
@@ -102,11 +105,12 @@ public sealed class ResourceLoader : IResourceLoader
         var args = new ScriptLoadArgs(Uri: uri, Integrity: integrity, CrossOrigin: crossOrigin, LoadInHead: loadInHead, Async: async, Defer: defer,
             IsModule: isModule);
 
-        ResourceCache<ScriptLoadArgs> scripts = Volatile.Read(ref _scripts) ?? CreateScripts();
-        return scripts.IsLoaded(args) ? ValueTask.CompletedTask : LoadUncached(scripts, args, cancellationToken);
+        ResourceCache<ScriptLoadArgs> scripts = Volatile.Read(ref _scripts) ?? await CreateScripts(cancellationToken);
+        if (!scripts.IsLoaded(args))
+            await LoadUncached(scripts, args, cancellationToken);
     }
 
-    private ValueTask LoadStyleInternal(string uri, string? integrity, string? crossOrigin, string? media, string? type,
+    private async ValueTask LoadStyleInternal(string uri, string? integrity, string? crossOrigin, string? media, string? type,
         CancellationToken cancellationToken)
     {
         ThrowIfDisposed();
@@ -116,22 +120,23 @@ public sealed class ResourceLoader : IResourceLoader
 
         var args = new StyleLoadArgs(Uri: uri, Integrity: integrity, CrossOrigin: crossOrigin, Media: media, Type: type);
 
-        ResourceCache<StyleLoadArgs> styles = Volatile.Read(ref _styles) ?? CreateStyles();
-        return styles.IsLoaded(args) ? ValueTask.CompletedTask : LoadUncached(styles, args, cancellationToken);
+        ResourceCache<StyleLoadArgs> styles = Volatile.Read(ref _styles) ?? await CreateStyles(cancellationToken);
+        if (!styles.IsLoaded(args))
+            await LoadUncached(styles, args, cancellationToken);
     }
 
-    private ResourceCache<ScriptLoadArgs> CreateScripts()
+    private async ValueTask<ResourceCache<ScriptLoadArgs>> CreateScripts(CancellationToken cancellationToken)
     {
-        lock (_lifetimeGate)
+        using (await _lifetimeGate.Lock(cancellationToken))
         {
             ThrowIfDisposed();
             return _scripts ??= new ResourceCache<ScriptLoadArgs>(LoadScriptCore);
         }
     }
 
-    private ResourceCache<StyleLoadArgs> CreateStyles()
+    private async ValueTask<ResourceCache<StyleLoadArgs>> CreateStyles(CancellationToken cancellationToken)
     {
-        lock (_lifetimeGate)
+        using (await _lifetimeGate.Lock(cancellationToken))
         {
             ThrowIfDisposed();
             return _styles ??= new ResourceCache<StyleLoadArgs>(LoadStyleCore);
@@ -142,7 +147,7 @@ public sealed class ResourceLoader : IResourceLoader
         where TArgs : notnull
     {
         ThrowIfDisposed();
-        CancellationToken linked = GetLifetimeToken().Link(cancellationToken, out CancellationTokenSource? source);
+        CancellationToken linked = (await GetLifetimeToken(cancellationToken)).Link(cancellationToken, out CancellationTokenSource? source);
         using (source)
             await cache.Get(args, linked);
     }
@@ -167,9 +172,9 @@ public sealed class ResourceLoader : IResourceLoader
             throw new ObjectDisposedException(nameof(ResourceLoader));
     }
 
-    private CancellationToken GetLifetimeToken()
+    private async ValueTask<CancellationToken> GetLifetimeToken(CancellationToken cancellationToken)
     {
-        lock (_lifetimeGate)
+        using (await _lifetimeGate.Lock(cancellationToken))
         {
             ObjectDisposedException.ThrowIf(_disposed.Value, this);
             return _lifetimeToken;
@@ -180,7 +185,7 @@ public sealed class ResourceLoader : IResourceLoader
     {
         try
         {
-            await _lifetimeCancellation.CancelAsync().ConfigureAwait(false);
+            await _lifetimeCancellation.CancelAsync().NoSync();
         }
         catch
         {
@@ -194,7 +199,7 @@ public sealed class ResourceLoader : IResourceLoader
 
     public async ValueTask DisposeAsync()
     {
-        lock (_lifetimeGate)
+        using (await _lifetimeGate.Lock())
         {
             if (!_disposed.TrySetTrue())
                 return;
@@ -202,10 +207,10 @@ public sealed class ResourceLoader : IResourceLoader
 
         await CancelLifetime();
         if (_scripts is not null)
-            await _scripts.DisposeAsync().ConfigureAwait(false);
+            await _scripts.DisposeAsync().NoSync();
         if (_styles is not null)
-            await _styles.DisposeAsync().ConfigureAwait(false);
+            await _styles.DisposeAsync().NoSync();
         if (_scripts is not null || _styles is not null)
-            await _moduleImportUtil.DisposeContentModule(_modulePath).ConfigureAwait(false);
+            await _moduleImportUtil.DisposeContentModule(_modulePath).NoSync();
     }
 }
