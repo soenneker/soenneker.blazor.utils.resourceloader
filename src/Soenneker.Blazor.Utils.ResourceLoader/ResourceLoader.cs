@@ -16,7 +16,7 @@ namespace Soenneker.Blazor.Utils.ResourceLoader;
 
 public sealed class ResourceLoader : IResourceLoader
 {
-    private const string _modulePath = "./_content/Soenneker.Blazor.Utils.ResourceLoader/js/resourceloader.js";
+    private const string _modulePath = "./_content/Soenneker.Blazor.Utils.ResourceLoader/js/resourceloader.min.js";
 
     private static readonly object _true = true;
     private static readonly object _false = false;
