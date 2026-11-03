@@ -48,10 +48,10 @@
 
     <ItemGroup>
         <PackageReference Include="Soenneker.Asyncs.Locks" Version="11.0.120" />
-        <PackageReference Include="Soenneker.Blazor.Utils.JsVariable" Version="11.0.1450" />
+        <PackageReference Include="Soenneker.Blazor.Utils.JsVariable" Version="11.0.1451" />
         <PackageReference Include="Soenneker.Extensions.ValueTask" Version="4.0.133" />
     </ItemGroup>
     <ItemGroup>
-        <PackageReference Include="Soenneker.Gen.Web.Minifier" Version="11.0.48" PrivateAssets="all" />
+        <PackageReference Include="Soenneker.Gen.Web.Minifier" Version="11.0.49" PrivateAssets="all" />
     </ItemGroup>
 </Project>
