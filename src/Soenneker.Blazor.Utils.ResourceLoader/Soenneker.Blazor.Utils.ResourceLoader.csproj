@@ -48,7 +48,7 @@
 
     <ItemGroup>
         <PackageReference Include="Soenneker.Asyncs.Locks" Version="11.0.120" />
-        <PackageReference Include="Soenneker.Blazor.Utils.JsVariable" Version="11.0.1456" />
+        <PackageReference Include="Soenneker.Blazor.Utils.JsVariable" Version="11.0.1457" />
         <PackageReference Include="Soenneker.Extensions.ValueTask" Version="4.0.133" />
     </ItemGroup>
     <ItemGroup>
