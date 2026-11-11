@@ -52,6 +52,6 @@
         <PackageReference Include="Soenneker.Extensions.ValueTask" Version="11.0.136" />
     </ItemGroup>
     <ItemGroup>
-        <PackageReference Include="Soenneker.Gen.Web.Minifier" Version="11.0.60" PrivateAssets="all" />
+        <PackageReference Include="Soenneker.Gen.Web.Minifier" Version="11.0.61" PrivateAssets="all" />
     </ItemGroup>
 </Project>
