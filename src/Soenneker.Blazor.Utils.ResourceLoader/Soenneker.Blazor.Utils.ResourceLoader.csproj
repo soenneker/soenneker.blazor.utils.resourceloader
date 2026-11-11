@@ -47,9 +47,9 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Soenneker.Asyncs.Locks" Version="11.0.120" />
-        <PackageReference Include="Soenneker.Blazor.Utils.JsVariable" Version="11.0.1461" />
-        <PackageReference Include="Soenneker.Extensions.ValueTask" Version="11.0.135" />
+        <PackageReference Include="Soenneker.Asyncs.Locks" Version="11.0.121" />
+        <PackageReference Include="Soenneker.Blazor.Utils.JsVariable" Version="11.0.1464" />
+        <PackageReference Include="Soenneker.Extensions.ValueTask" Version="11.0.136" />
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="Soenneker.Gen.Web.Minifier" Version="11.0.57" PrivateAssets="all" />
